@@ -13,4 +13,16 @@ use Games::Nex::Test;
         BOARD
 }
 
+{
+    my $game = emptyGame(5);
+    $game.place(:player(Player1), own => [3, 4], neutral => [4, 0]);
+    is $game.dump, q:to[BOARD], "a correct placement move";
+        . . . . .
+         . . . . .
+          . . . . .
+           . . . . V
+            n . . . .
+        BOARD
+}
+
 done-testing;
