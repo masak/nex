@@ -73,4 +73,10 @@ use Games::Nex::Test;
     ;
 }
 
+{
+    my $game = emptyGame(6);
+    lives-ok { $game.place(:player(Player1), own => [3, 5], neutral => [4, 0]) },
+        "piece is not outside the board if the board is bigger, however";
+}
+
 done-testing;

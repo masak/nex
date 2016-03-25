@@ -13,11 +13,12 @@ class X::OutsideBoard is Exception {
 }
 
 class Games::Nex {
-    has @!board = ["." xx 5] xx 5;
+    has Int $.size;
+    has @!board = ["." xx $!size] xx $!size;
 
     multi method place(Player :$player!, Pos :$own!, Pos :$neutral!) {
         my $min = 0;
-        my $max = 4;
+        my $max = $.size - 1;
 
         for $own, $neutral Z
             "The player's own piece", "The neutral piece"
