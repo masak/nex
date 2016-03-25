@@ -89,4 +89,36 @@ use Games::Nex::Test;
     ;
 }
 
+{
+    my $game = gameFromBoard(q:to[BOARD]);
+        . . . . .
+         . V . . .
+          . n . . .
+           . . . . .
+            . . . . .
+        BOARD
+    throws-like { $game.place(:player(Player1), own => [1, 1], neutral => [3, 4]) },
+        X::Occupied,
+        "erroneous move: player's piece on an occupied spot",
+        row => 1,
+        column => 1,
+    ;
+}
+
+{
+    my $game = gameFromBoard(q:to[BOARD]);
+        . . . . .
+         . . V . .
+          . n . . .
+           . . . . .
+            . . . . .
+        BOARD
+    throws-like { $game.place(:player(Player1), own => [2, 2], neutral => [1, 2]) },
+        X::Occupied,
+        "erroneous move: neutral piece on an occupied spot",
+        row => 1,
+        column => 2,
+    ;
+}
+
 done-testing;

@@ -25,6 +25,8 @@ class Games::Nex {
     has Int $.size;
     has @!board = ["." xx $!size] xx $!size;
 
+    method initialize-board(@!board) {}
+
     multi method place(Player :$player!, Pos :$own!, Pos :$neutral!) {
         my $min = 0;
         my $max = $.size - 1;
@@ -41,6 +43,10 @@ class Games::Nex {
 
         die X::Occupied.new(:row($own[0]), :column($own[1]))
             if $own eqv $neutral;
+        die X::Occupied.new(:row($own[0]), :column($own[1]))
+            if @!board[$own[0]][$own[1]] ne ".";
+        die X::Occupied.new(:row($neutral[0]), :column($neutral[1]))
+            if @!board[$neutral[0]][$neutral[1]] ne ".";
 
         my $own-stone = $player == Player1 ?? "V" !! "H";
         @!board[$own[0]][$own[1]] = $own-stone;
