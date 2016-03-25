@@ -121,4 +121,34 @@ use Games::Nex::Test;
     ;
 }
 
+{
+    my $game = empty-game(5);
+    $game.initialize-player-to-move(Player2);
+    $game.place(:player(Player2), own => [1, 1], neutral => [2, 1]);
+    is $game.dump, q:to[BOARD], "player two can also make moves";
+        . . . . .
+         . H . . .
+          . n . . .
+           . . . . .
+            . . . . .
+        BOARD
+}
+
+{
+    my $game = empty-game(5);
+    $game.initialize-player-to-move(Player2);
+    throws-like { $game.place(:player(Player1), own => [1, 1], neutral => [2, 1]) },
+        X::NotPlayersTurn,
+        "erroneous move: not player 1's turn",
+    ;
+}
+
+{
+    my $game = empty-game(5);
+    throws-like { $game.place(:player(Player2), own => [1, 1], neutral => [2, 1]) },
+        X::NotPlayersTurn,
+        "erroneous move: not player 2's turn",
+    ;
+}
+
 done-testing;

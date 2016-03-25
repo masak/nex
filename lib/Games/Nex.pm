@@ -21,13 +21,24 @@ class X::Occupied is Exception {
     }
 }
 
+class X::NotPlayersTurn is Exception {
+    method message() {
+        "Cannot make the move because the player is not on turn"
+    }
+}
+
 class Games::Nex {
     has Int $.size;
     has @!board = ["." xx $!size] xx $!size;
+    has Player $!player-to-move = Player1;
 
     method initialize-board(@!board) {}
+    method initialize-player-to-move(Player $!player-to-move) {}
 
     multi method place(Player :$player!, Pos :$own!, Pos :$neutral!) {
+        die X::NotPlayersTurn.new
+            unless $player == $!player-to-move;
+
         my $min = 0;
         my $max = $.size - 1;
 
