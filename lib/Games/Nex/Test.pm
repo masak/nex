@@ -1,10 +1,10 @@
 use Games::Nex;
 
-sub emptyGame(Int $size) is export {
+sub empty-game(Int $size) is export {
     return Games::Nex.new(:$size);
 }
 
-sub gameFromBoard(Str $description) is export {
+sub game-from-board(Str $description) is export {
     my $size = +$description.lines[0].words;
     die "Wrong number of lines: {+$description.lines} (expected $size)"
         unless $description.lines == $size;

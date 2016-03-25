@@ -2,7 +2,7 @@ use Test;
 use Games::Nex::Test;
 
 {
-    my $game = emptyGame(5);
+    my $game = empty-game(5);
     $game.place(:player(Player1), own => [1, 1], neutral => [2, 1]);
     is $game.dump, q:to[BOARD], "a correct placement move";
         . . . . .
@@ -14,7 +14,7 @@ use Games::Nex::Test;
 }
 
 {
-    my $game = emptyGame(5);
+    my $game = empty-game(5);
     $game.place(:player(Player1), own => [3, 4], neutral => [4, 0]);
     is $game.dump, q:to[BOARD], "a correct placement move";
         . . . . .
@@ -26,7 +26,7 @@ use Games::Nex::Test;
 }
 
 {
-    my $game = emptyGame(5);
+    my $game = empty-game(5);
     throws-like { $game.place(:player(Player1), own => [3, 5], neutral => [4, 0]) },
         X::OutsideBoard,
         "erroneous move: the vertical piece is outside the board",
@@ -38,7 +38,7 @@ use Games::Nex::Test;
 }
 
 {
-    my $game = emptyGame(5);
+    my $game = empty-game(5);
     throws-like { $game.place(:player(Player1), own => [-2, 2], neutral => [4, 0]) },
         X::OutsideBoard,
         "erroneous move: the vertical piece is outside the board",
@@ -50,7 +50,7 @@ use Games::Nex::Test;
 }
 
 {
-    my $game = emptyGame(5);
+    my $game = empty-game(5);
     throws-like { $game.place(:player(Player1), own => [4, 0], neutral => [1, 7]) },
         X::OutsideBoard,
         "erroneous move: the neutral piece is outside the board",
@@ -62,7 +62,7 @@ use Games::Nex::Test;
 }
 
 {
-    my $game = emptyGame(5);
+    my $game = empty-game(5);
     throws-like { $game.place(:player(Player1), own => [2, 0], neutral => [-1, 3]) },
         X::OutsideBoard,
         "erroneous move: the neutral piece is outside the board",
@@ -74,13 +74,13 @@ use Games::Nex::Test;
 }
 
 {
-    my $game = emptyGame(6);
+    my $game = empty-game(6);
     lives-ok { $game.place(:player(Player1), own => [3, 5], neutral => [4, 0]) },
         "piece is not outside the board if the board is bigger, however";
 }
 
 {
-    my $game = emptyGame(5);
+    my $game = empty-game(5);
     throws-like { $game.place(:player(Player1), own => [3, 3], neutral => [3, 3]) },
         X::Occupied,
         "erroneous move: placing the player's piece and the neutral piece on the same spot",
@@ -90,7 +90,7 @@ use Games::Nex::Test;
 }
 
 {
-    my $game = gameFromBoard(q:to[BOARD]);
+    my $game = game-from-board(q:to[BOARD]);
         . . . . .
          . V . . .
           . n . . .
@@ -106,7 +106,7 @@ use Games::Nex::Test;
 }
 
 {
-    my $game = gameFromBoard(q:to[BOARD]);
+    my $game = game-from-board(q:to[BOARD]);
         . . . . .
          . . V . .
           . n . . .
