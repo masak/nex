@@ -1,4 +1,8 @@
 enum Player <Player1 Player2>;
+sub opponent(Player $p --> Player) {
+    $p == Player1 ?? Player2 !! Player1;
+}
+
 subset Pos of Positional where { .elems == 2 && .all ~~ Int };
 
 class X::OutsideBoard is Exception {
@@ -62,6 +66,8 @@ class Games::Nex {
         my $own-stone = $player == Player1 ?? "V" !! "H";
         @!board[$own[0]][$own[1]] = $own-stone;
         @!board[$neutral[0]][$neutral[1]] = "n";
+
+        $!player-to-move = opponent($!player-to-move);
     }
 
     method dump() {

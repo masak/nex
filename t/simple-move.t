@@ -151,4 +151,18 @@ use Games::Nex::Test;
     ;
 }
 
+{
+    my $game = empty-game(5);
+    $game.place(:player(Player1), own => [3, 1], neutral => [2, 4]);
+    $game.place(:player(Player2), own => [1, 0], neutral => [3, 2]);
+    $game.place(:player(Player1), own => [4, 2], neutral => [3, 0]);
+    is $game.dump, q:to[BOARD], "player to move switches back and forth";
+        . . . . .
+         H . . . .
+          . . . . n
+           n V n . .
+            . . V . .
+        BOARD
+}
+
 done-testing;
