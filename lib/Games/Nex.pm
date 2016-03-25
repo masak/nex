@@ -1,5 +1,5 @@
 enum Player <Player1 Player2>;
-subset Pos of Positional where *.elems == 2;
+subset Pos of Positional where { .elems == 2 && .all ~~ Int };
 
 class X::OutsideBoard is Exception {
     has Str $.piece;
@@ -9,6 +9,15 @@ class X::OutsideBoard is Exception {
 
     method message() {
         "$.piece was outside the board: $.coord (min: $.min, max: $.max)"
+    }
+}
+
+class X::Occupied is Exception {
+    has Int $.row;
+    has Int $.column;
+
+    method message() {
+        "Position ($.row, $.column) is occupied"
     }
 }
 
@@ -29,6 +38,9 @@ class Games::Nex {
                     unless $coord ~~ $min..$max;
             }
         }
+
+        die X::Occupied.new(:row($own[0]), :column($own[1]))
+            if $own eqv $neutral;
 
         my $own-stone = $player == Player1 ?? "V" !! "H";
         @!board[$own[0]][$own[1]] = $own-stone;

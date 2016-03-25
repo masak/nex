@@ -79,4 +79,14 @@ use Games::Nex::Test;
         "piece is not outside the board if the board is bigger, however";
 }
 
+{
+    my $game = emptyGame(5);
+    throws-like { $game.place(:player(Player1), own => [3, 3], neutral => [3, 3]) },
+        X::Occupied,
+        "erroneous move: placing the player's piece and the neutral piece on the same spot",
+        row => 3,
+        column => 3,
+    ;
+}
+
 done-testing;
