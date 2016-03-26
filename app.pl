@@ -1,7 +1,7 @@
 use Bailador;
 
 get '/' => sub {
-    return q:to'HTML';
+    return q:to 'HTML';
         <!DOCTYPE html>
         <html lang="en">
         <head>
