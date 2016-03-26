@@ -23,7 +23,7 @@ get '/' => sub {
                    . . . . . . . . . . . . .
                     . . . . . . . . . . . . .</code></pre>
 
-            <form action="//game" method="post">
+            <form action="/game" method="post">
                 <label for="placement-player">Player: </label>
                     <input type="text" id="placement-player"><br>
                 <label for="placement-own-stone-row">Own stone row: </label>
@@ -38,6 +38,11 @@ get '/' => sub {
             </form>
         </body>
         HTML
+}
+
+post '/game' => sub {
+    my $data = request.body;
+    return $data;
 }
 
 baile( Int(%*ENV<PORT> || 5000) );
