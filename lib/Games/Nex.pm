@@ -3,8 +3,8 @@ sub opponent(Player $p --> Player) {
     $p == Player1 ?? Player2 !! Player1;
 }
 
-enum Color <None Vertical Horizontal Neutral>;
-my %piece-symbol{Color} =
+enum Stone <None Vertical Horizontal Neutral>;
+my %piece-symbol{Stone} =
     (None) => ".",
     (Vertical) => "V",
     (Horizontal) => "H",
