@@ -109,7 +109,7 @@ use Games::Nex::Test;
             . . H . .
         BOARD
     throws-like { $game.convert(:player(Player1), neutral1 => [2, 1], neutral2 => [3, 4], own => [1, 2]) },
-        X::Empty,
+        X::Unoccupied,
         "erroneous move: first neutral piece on an empty spot",
         row => 2,
         column => 1,
@@ -157,7 +157,7 @@ use Games::Nex::Test;
             . . H . .
         BOARD
     throws-like { $game.convert(:player(Player1), neutral1 => [2, 1], neutral2 => [3, 4], own => [1, 2]) },
-        X::Empty,
+        X::Unoccupied,
         "erroneous move: second neutral piece on an empty spot",
         row => 3,
         column => 4,
@@ -205,7 +205,7 @@ use Games::Nex::Test;
             . . H . .
         BOARD
     throws-like { $game.convert(:player(Player1), neutral1 => [2, 1], neutral2 => [3, 4], own => [1, 2]) },
-        X::Empty,
+        X::Unoccupied,
         "erroneous move: own piece on an empty spot",
         row => 1,
         column => 2,

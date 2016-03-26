@@ -3,6 +3,13 @@ sub opponent(Player $p --> Player) {
     $p == Player1 ?? Player2 !! Player1;
 }
 
+enum Color <Unoccupied Vertical Horizontal Neutral>;
+my %piece-symbol{Color} =
+    (Unoccupied) => ".",
+    (Vertical) => "V",
+    (Horizontal) => "H",
+    (Neutral) => "n";
+
 subset Pos of Positional where { .elems == 2 && .all ~~ Int };
 
 class X::OutsideBoard is Exception {
@@ -34,7 +41,7 @@ class X::Overuse is Exception {
     }
 }
 
-class X::Empty is Exception {
+class X::Unoccupied is Exception {
     has Int $.row;
     has Int $.column;
 
@@ -67,15 +74,30 @@ class X::NotPlayersTurn is Exception {
     }
 }
 
+class X::TooLateForSwap is Exception {
+    method message() {
+        "Cannot swap after the second move"
+    }
+}
+
 class Games::Nex {
     has Int $.size;
     has Int $!min = 0;
     has Int $!max = $!size - 1;
-    has @!board = ["." xx $!size] xx $!size;
+    has @!board = [Unoccupied xx $!size] xx $!size;
     has Player $!player-to-move = Player1;
+    has Int $!moves-played = 0;
+    has Bool $!swapped = False;
 
     method initialize-board(@!board) {}
     method initialize-player-to-move(Player $!player-to-move) {}
+    method initialize-moves-played(Int $!moves-played) {}
+
+    method !color-of(Player $player) {
+        ($player == Player1 ^^ $!swapped)
+            ?? Vertical
+            !! Horizontal
+    }
 
     method place(Player :$player!, Pos :$own!, Pos :$neutral!) {
         die X::NotPlayersTurn.new
@@ -94,15 +116,15 @@ class Games::Nex {
         die X::Occupied.new(:row($own[0]), :column($own[1]))
             if $own eqv $neutral;
         die X::Occupied.new(:row($own[0]), :column($own[1]))
-            if @!board[$own[0]][$own[1]] ne ".";
+            if @!board[$own[0]][$own[1]] != Unoccupied;
         die X::Occupied.new(:row($neutral[0]), :column($neutral[1]))
-            if @!board[$neutral[0]][$neutral[1]] ne ".";
+            if @!board[$neutral[0]][$neutral[1]] != Unoccupied;
 
-        my $own-stone = $player == Player1 ?? "V" !! "H";
-        @!board[$own[0]][$own[1]] = $own-stone;
-        @!board[$neutral[0]][$neutral[1]] = "n";
+        @!board[$own[0]][$own[1]] = self!color-of($player);
+        @!board[$neutral[0]][$neutral[1]] = Neutral;
 
         $!player-to-move = opponent($!player-to-move);
+        $!moves-played++;
     }
 
     method convert(Player :$player!, Pos :$neutral1!, Pos :$neutral2!, Pos :$own!) {
@@ -119,8 +141,8 @@ class Games::Nex {
             }
         }
 
-        my $own-stone = $player == Player1 ?? "V" !! "H";
-        my $opponent-stone = $player == Player1 ?? "H" !! "V";
+        my $own-color = self!color-of($player);
+        my $opponent-color = self!color-of(opponent($player));
 
         die X::Overuse.new(:row($neutral1[0]), :column($neutral1[1]))
             if $neutral1 eqv $neutral2;
@@ -129,37 +151,49 @@ class Games::Nex {
         die X::Overuse.new(:row($neutral2[0]), :column($neutral2[1]))
             if $neutral2 eqv $own;
 
-        die X::Empty.new(:row($neutral1[0]), :column($neutral1[1]))
-            if @!board[$neutral1[0]][$neutral1[1]] eq ".";
+        die X::Unoccupied.new(:row($neutral1[0]), :column($neutral1[1]))
+            if @!board[$neutral1[0]][$neutral1[1]] == Unoccupied;
         die X::Occupied.new(:row($neutral1[0]), :column($neutral1[1]))
-            if @!board[$neutral1[0]][$neutral1[1]] eq $opponent-stone;
+            if @!board[$neutral1[0]][$neutral1[1]] == $opponent-color;
         die X::AlreadyYours.new(:row($neutral1[0]), :column($neutral1[1]))
-            if @!board[$neutral1[0]][$neutral1[1]] eq $own-stone;
+            if @!board[$neutral1[0]][$neutral1[1]] == $own-color;
 
-        die X::Empty.new(:row($neutral2[0]), :column($neutral2[1]))
-            if @!board[$neutral2[0]][$neutral2[1]] eq ".";
+        die X::Unoccupied.new(:row($neutral2[0]), :column($neutral2[1]))
+            if @!board[$neutral2[0]][$neutral2[1]] == Unoccupied;
         die X::Occupied.new(:row($neutral2[0]), :column($neutral2[1]))
-            if @!board[$neutral2[0]][$neutral2[1]] eq $opponent-stone;
+            if @!board[$neutral2[0]][$neutral2[1]] == $opponent-color;
         die X::AlreadyYours.new(:row($neutral2[0]), :column($neutral2[1]))
-            if @!board[$neutral2[0]][$neutral2[1]] eq $own-stone;
+            if @!board[$neutral2[0]][$neutral2[1]] == $own-color;
 
-        die X::Empty.new(:row($own[0]), :column($own[1]))
-            if @!board[$own[0]][$own[1]] eq ".";
+        die X::Unoccupied.new(:row($own[0]), :column($own[1]))
+            if @!board[$own[0]][$own[1]] == Unoccupied;
         die X::Occupied.new(:row($own[0]), :column($own[1]))
-            if @!board[$own[0]][$own[1]] eq $opponent-stone;
+            if @!board[$own[0]][$own[1]] == $opponent-color;
         die X::AlreadyNeutral.new(:row($own[0]), :column($own[1]))
-            if @!board[$own[0]][$own[1]] eq "n";
+            if @!board[$own[0]][$own[1]] == Neutral;
 
-        @!board[$neutral1[0]][$neutral1[1]] = $own-stone;
-        @!board[$neutral2[0]][$neutral2[1]] = $own-stone;
-        @!board[$own[0]][$own[1]] = "n";
+        @!board[$neutral1[0]][$neutral1[1]] = $own-color;
+        @!board[$neutral2[0]][$neutral2[1]] = $own-color;
+        @!board[$own[0]][$own[1]] = Neutral;
 
         $!player-to-move = opponent($!player-to-move);
+        $!moves-played++;
+    }
+
+    method swap() {
+        die X::NotPlayersTurn.new
+            unless Player2 == $!player-to-move;
+        die X::TooLateForSwap.new
+            if $!moves-played > 1;
+
+        $!swapped = True;
+        $!player-to-move = opponent($!player-to-move);
+        $!moves-played++;
     }
 
     method dump() {
         return @!board.kv.map(-> $i, @row {
-            (" " x $i) ~ @row.join(" ") ~ "\n"
+            (" " x $i) ~ @row.map({ %piece-symbol{$_} }).join(" ") ~ "\n"
         }).join;
     }
 }
