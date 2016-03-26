@@ -41,8 +41,7 @@ get '/' => sub {
 }
 
 post '/game' => sub {
-    my $data = request.body;
-    return $data;
+    return request.env.perl;
 }
 
 baile( Int(%*ENV<PORT> || 5000) );
