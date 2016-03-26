@@ -182,8 +182,8 @@ class Games::Nex {
     }
 
     method dump() {
-        return @!board.kv.map(-> $i, @row {
-            (" " x $i) ~ @row.join(" ") ~ "\n"
+        return @!board.kv.map({
+            (" " x $^i) ~ @^row.join(" ") ~ "\n"
         }).join;
     }
 }
