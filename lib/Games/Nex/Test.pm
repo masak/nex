@@ -4,12 +4,12 @@ sub empty-game(Int $size) is export {
     return Games::Nex.new(:$size);
 }
 
-my %color-of-symbol =
-    "." => None,
-    "V" => Vertical,
-    "H" => Horizontal,
-    "n" => Neutral,
-;
+my %color-of-symbol;
+# [RAKUDO] Until RT #127789 is fixed, we can't just `Stone.enums.invert`
+# But we can still remove duplication by looping over stuff:
+for Stone.enums -> $enum {
+    %color-of-symbol{$enum.value} = Stone::{$enum.key};
+}
 
 sub game-from-board(Str $description) is export {
     my $size = +$description.lines[0].words;
