@@ -3,12 +3,12 @@ sub opponent(Player $p --> Player) {
     $p == Player1 ?? Player2 !! Player1;
 }
 
-enum Stone <None Vertical Horizontal Neutral>;
-my %piece-symbol{Stone} =
-    (None) => ".",
-    (Vertical) => "V",
-    (Horizontal) => "H",
-    (Neutral) => "n";
+enum Stone «
+    :None<.>
+    :Vertical<V>
+    :Horizontal<H>
+    :Neutral<n>
+»;
 
 subset Pos of Positional where { .elems == 2 && .all ~~ Int };
 
@@ -116,9 +116,9 @@ class Games::Nex {
         die X::Occupied.new(:row($own[0]), :column($own[1]))
             if $own eqv $neutral;
         die X::Occupied.new(:row($own[0]), :column($own[1]))
-            if @!board[$own[0]][$own[1]] != None;
+            if @!board[$own[0]][$own[1]] ne None;
         die X::Occupied.new(:row($neutral[0]), :column($neutral[1]))
-            if @!board[$neutral[0]][$neutral[1]] != None;
+            if @!board[$neutral[0]][$neutral[1]] ne None;
 
         @!board[$own[0]][$own[1]] = self!color-of($player);
         @!board[$neutral[0]][$neutral[1]] = Neutral;
@@ -152,25 +152,25 @@ class Games::Nex {
             if $neutral2 eqv $own;
 
         die X::Unoccupied.new(:row($neutral1[0]), :column($neutral1[1]))
-            if @!board[$neutral1[0]][$neutral1[1]] == None;
+            if @!board[$neutral1[0]][$neutral1[1]] eq None;
         die X::Occupied.new(:row($neutral1[0]), :column($neutral1[1]))
-            if @!board[$neutral1[0]][$neutral1[1]] == $opponent-color;
+            if @!board[$neutral1[0]][$neutral1[1]] eq $opponent-color;
         die X::AlreadyYours.new(:row($neutral1[0]), :column($neutral1[1]))
-            if @!board[$neutral1[0]][$neutral1[1]] == $own-color;
+            if @!board[$neutral1[0]][$neutral1[1]] eq $own-color;
 
         die X::Unoccupied.new(:row($neutral2[0]), :column($neutral2[1]))
-            if @!board[$neutral2[0]][$neutral2[1]] == None;
+            if @!board[$neutral2[0]][$neutral2[1]] eq None;
         die X::Occupied.new(:row($neutral2[0]), :column($neutral2[1]))
-            if @!board[$neutral2[0]][$neutral2[1]] == $opponent-color;
+            if @!board[$neutral2[0]][$neutral2[1]] eq $opponent-color;
         die X::AlreadyYours.new(:row($neutral2[0]), :column($neutral2[1]))
-            if @!board[$neutral2[0]][$neutral2[1]] == $own-color;
+            if @!board[$neutral2[0]][$neutral2[1]] eq $own-color;
 
         die X::Unoccupied.new(:row($own[0]), :column($own[1]))
-            if @!board[$own[0]][$own[1]] == None;
+            if @!board[$own[0]][$own[1]] eq None;
         die X::Occupied.new(:row($own[0]), :column($own[1]))
-            if @!board[$own[0]][$own[1]] == $opponent-color;
+            if @!board[$own[0]][$own[1]] eq $opponent-color;
         die X::AlreadyNeutral.new(:row($own[0]), :column($own[1]))
-            if @!board[$own[0]][$own[1]] == Neutral;
+            if @!board[$own[0]][$own[1]] eq Neutral;
 
         @!board[$neutral1[0]][$neutral1[1]] = $own-color;
         @!board[$neutral2[0]][$neutral2[1]] = $own-color;
@@ -193,7 +193,7 @@ class Games::Nex {
 
     method dump() {
         return @!board.kv.map(-> $i, @row {
-            (" " x $i) ~ @row.map({ %piece-symbol{$_} }).join(" ") ~ "\n"
+            (" " x $i) ~ @row.join(" ") ~ "\n"
         }).join;
     }
 }
