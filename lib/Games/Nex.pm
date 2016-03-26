@@ -23,46 +23,36 @@ class X::OutsideBoard is Exception {
     }
 }
 
-class X::Occupied is Exception {
+role Coordinates {
     has Int $.row;
     has Int $.column;
+}
 
+class X::Occupied is Exception does Coordinates {
     method message() {
         "Position ($.row, $.column) is occupied"
     }
 }
 
-class X::DoubleUse is Exception {
-    has Int $.row;
-    has Int $.column;
-
+class X::DoubleUse is Exception does Coordinates {
     method message() {
         "Trying to use ($.row, $.column) more than once during a conversion"
     }
 }
 
-class X::Unoccupied is Exception {
-    has Int $.row;
-    has Int $.column;
-
+class X::Unoccupied is Exception does Coordinates {
     method message() {
         "Trying to convert ($.row, $.column) but it is empty"
     }
 }
 
-class X::AlreadyYours is Exception {
-    has Int $.row;
-    has Int $.column;
-
+class X::AlreadyYours is Exception does Coordinates {
     method message() {
         "Trying to convert ($.row, $.column) from neutral but it already belongs to the player"
     }
 }
 
-class X::AlreadyNeutral is Exception {
-    has Int $.row;
-    has Int $.column;
-
+class X::AlreadyNeutral is Exception does Coordinates {
     method message() {
         "Trying to convert ($.row, $.column) to neutral but it is already neutral"
     }
