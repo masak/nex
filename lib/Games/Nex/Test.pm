@@ -5,7 +5,7 @@ sub empty-game(Int $size) is export {
 }
 
 my %color-of-symbol =
-    "." => Unoccupied,
+    "." => None,
     "V" => Vertical,
     "H" => Horizontal,
     "n" => Neutral,

@@ -3,9 +3,9 @@ sub opponent(Player $p --> Player) {
     $p == Player1 ?? Player2 !! Player1;
 }
 
-enum Color <Unoccupied Vertical Horizontal Neutral>;
+enum Color <None Vertical Horizontal Neutral>;
 my %piece-symbol{Color} =
-    (Unoccupied) => ".",
+    (None) => ".",
     (Vertical) => "V",
     (Horizontal) => "H",
     (Neutral) => "n";
@@ -84,7 +84,7 @@ class Games::Nex {
     has Int $.size;
     has Int $!min = 0;
     has Int $!max = $!size - 1;
-    has @!board = [Unoccupied xx $!size] xx $!size;
+    has @!board = [None xx $!size] xx $!size;
     has Player $!player-to-move = Player1;
     has Int $!moves-played = 0;
     has Bool $!swapped = False;
@@ -116,9 +116,9 @@ class Games::Nex {
         die X::Occupied.new(:row($own[0]), :column($own[1]))
             if $own eqv $neutral;
         die X::Occupied.new(:row($own[0]), :column($own[1]))
-            if @!board[$own[0]][$own[1]] != Unoccupied;
+            if @!board[$own[0]][$own[1]] != None;
         die X::Occupied.new(:row($neutral[0]), :column($neutral[1]))
-            if @!board[$neutral[0]][$neutral[1]] != Unoccupied;
+            if @!board[$neutral[0]][$neutral[1]] != None;
 
         @!board[$own[0]][$own[1]] = self!color-of($player);
         @!board[$neutral[0]][$neutral[1]] = Neutral;
@@ -152,21 +152,21 @@ class Games::Nex {
             if $neutral2 eqv $own;
 
         die X::Unoccupied.new(:row($neutral1[0]), :column($neutral1[1]))
-            if @!board[$neutral1[0]][$neutral1[1]] == Unoccupied;
+            if @!board[$neutral1[0]][$neutral1[1]] == None;
         die X::Occupied.new(:row($neutral1[0]), :column($neutral1[1]))
             if @!board[$neutral1[0]][$neutral1[1]] == $opponent-color;
         die X::AlreadyYours.new(:row($neutral1[0]), :column($neutral1[1]))
             if @!board[$neutral1[0]][$neutral1[1]] == $own-color;
 
         die X::Unoccupied.new(:row($neutral2[0]), :column($neutral2[1]))
-            if @!board[$neutral2[0]][$neutral2[1]] == Unoccupied;
+            if @!board[$neutral2[0]][$neutral2[1]] == None;
         die X::Occupied.new(:row($neutral2[0]), :column($neutral2[1]))
             if @!board[$neutral2[0]][$neutral2[1]] == $opponent-color;
         die X::AlreadyYours.new(:row($neutral2[0]), :column($neutral2[1]))
             if @!board[$neutral2[0]][$neutral2[1]] == $own-color;
 
         die X::Unoccupied.new(:row($own[0]), :column($own[1]))
-            if @!board[$own[0]][$own[1]] == Unoccupied;
+            if @!board[$own[0]][$own[1]] == None;
         die X::Occupied.new(:row($own[0]), :column($own[1]))
             if @!board[$own[0]][$own[1]] == $opponent-color;
         die X::AlreadyNeutral.new(:row($own[0]), :column($own[1]))
