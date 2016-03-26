@@ -41,7 +41,7 @@ get '/' => sub {
 }
 
 post '/game' => sub {
-    return request.env.perl;
+    return request.env<p6sgi.input>.decode;
 }
 
 baile( Int(%*ENV<PORT> || 5000) );
