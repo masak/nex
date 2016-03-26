@@ -73,7 +73,7 @@ use Games::Nex::Test;
 {
     my $game = empty-game(5);
     throws-like { $game.convert(:player(Player1), neutral1 => [1, 1], neutral2 => [1, 1], own => [1, 2]) },
-        X::Overuse,
+        X::DoubleUse,
         "erroneous move: choosing the same neutral piece twice",
         row => 1,
         column => 1,
@@ -83,7 +83,7 @@ use Games::Nex::Test;
 {
     my $game = empty-game(5);
     throws-like { $game.convert(:player(Player1), neutral1 => [3, 3], neutral2 => [1, 2], own => [3, 3]) },
-        X::Overuse,
+        X::DoubleUse,
         "erroneous move: choosing the same first neutral piece as own piece",
         row => 3,
         column => 3,
@@ -93,7 +93,7 @@ use Games::Nex::Test;
 {
     my $game = empty-game(5);
     throws-like { $game.convert(:player(Player1), neutral1 => [3, 3], neutral2 => [1, 2], own => [1, 2]) },
-        X::Overuse,
+        X::DoubleUse,
         "erroneous move: choosing the same second neutral piece as own piece",
         row => 1,
         column => 2,

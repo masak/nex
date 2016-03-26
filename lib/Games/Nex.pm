@@ -32,7 +32,7 @@ class X::Occupied is Exception {
     }
 }
 
-class X::Overuse is Exception {
+class X::DoubleUse is Exception {
     has Int $.row;
     has Int $.column;
 
@@ -144,11 +144,11 @@ class Games::Nex {
         my $own-color = self!color-of($player);
         my $opponent-color = self!color-of(opponent($player));
 
-        die X::Overuse.new(:row($neutral1[0]), :column($neutral1[1]))
+        die X::DoubleUse.new(:row($neutral1[0]), :column($neutral1[1]))
             if $neutral1 eqv $neutral2;
-        die X::Overuse.new(:row($neutral1[0]), :column($neutral1[1]))
+        die X::DoubleUse.new(:row($neutral1[0]), :column($neutral1[1]))
             if $neutral1 eqv $own;
-        die X::Overuse.new(:row($neutral2[0]), :column($neutral2[1]))
+        die X::DoubleUse.new(:row($neutral2[0]), :column($neutral2[1]))
             if $neutral2 eqv $own;
 
         die X::Unoccupied.new(:row($neutral1[0]), :column($neutral1[1]))
