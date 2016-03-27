@@ -56,7 +56,7 @@ post '/game' => sub {
     my Games::Nex $game .= new(:size(13));
     $game.place(:$player, :$own, :$neutral);
 
-    header("Location: /");
+    header("Location", "/");
 }
 
 baile( Int(%*ENV<PORT> || 5000) );
