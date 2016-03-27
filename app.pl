@@ -56,6 +56,7 @@ post '/game' => sub {
     my Games::Nex $game .= new(:size(13));
     $game.place(:$player, :$own, :$neutral);
 
+    status(302);
     header("Location", "/");
 }
 
