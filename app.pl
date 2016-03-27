@@ -1,4 +1,6 @@
 use Bailador;
+
+use lib 'lib';
 use Games::Nex;
 
 get '/' => sub {
