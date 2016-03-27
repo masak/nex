@@ -1,4 +1,5 @@
 use Bailador;
+use Nex;
 
 get '/' => sub {
     return q:to 'HTML';
@@ -41,7 +42,14 @@ get '/' => sub {
 }
 
 post '/game' => sub {
-    return request.env<p6sgi.input>.decode;
+    my $data = request.env<p6sgi.input>.decode;
+    my %params = $data.split('&').map({
+        my @components = .split('=');
+        @components[0] => @components[1];
+    });
+    "A placement move by player %params<player>: own stone " ~
+        %params<own-stone-row own-stone-column>.perl ~
+        ", neutral stone: " ~ %params<neutral-stone-row neutral-stone-column>.perl;
 }
 
 baile( Int(%*ENV<PORT> || 5000) );
