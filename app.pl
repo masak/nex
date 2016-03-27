@@ -1,5 +1,4 @@
 use Bailador;
-use Nex;
 
 get '/' => sub {
     return q:to 'HTML';
