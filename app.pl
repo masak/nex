@@ -44,7 +44,6 @@ get '/' => sub {
 }
 
 post '/game' => sub {
-    die request.params.perl;
     my $data = request.env<p6sgi.input>.decode;
     my %params = $data.split('&').map({
         my @components = .split('=');
