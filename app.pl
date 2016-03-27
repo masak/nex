@@ -1,4 +1,5 @@
 use Bailador;
+use Games::Nex;
 
 get '/' => sub {
     return q:to 'HTML';
@@ -46,9 +47,13 @@ post '/game' => sub {
         my @components = .split('=');
         @components[0] => @components[1];
     });
-    "A placement move by player %params<player>: own stone " ~
-        %params<own-stone-row own-stone-column>.perl ~
-        ", neutral stone: " ~ %params<neutral-stone-row neutral-stone-column>.perl;
+    # XXX: input validation
+    my $player = %params<player> eq "1" ?? Player1 !! Player2;
+    my Pos $own = [+%params<own-stone-row>, +%params<own-stone-column>];
+    my Pos $neutral = [+%params<neutral-stone-row>, +%params<neutral-stone-column>];
+    my Games::Nex $game .= new(:size(13));
+    $game.place(:$player, :$own, :$neutral);
+    $game.dump;
 }
 
 baile( Int(%*ENV<PORT> || 5000) );
