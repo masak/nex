@@ -112,6 +112,23 @@ class Games::Nex {
         }
     }
 
+    method !assert-stone(Stone:D $expected-stone, @positions) {
+        my $own-color = self!color-of($!player-to-move);
+
+        for @positions -> Pos $pos {
+            my ($row, $column) = @$pos;
+            my $actual-stone = @!board[$row][$column];
+            die X::Unoccupied.new(:$row, :$column)
+                if $expected-stone ne None && $actual-stone eq None;
+            die X::AlreadyYours.new(:$row, :$column)
+                if $expected-stone eq Neutral && $actual-stone eq $own-color;
+            die X::AlreadyNeutral.new(:$row, :$column)
+                if $expected-stone eq $own-color && $actual-stone eq Neutral;
+            die X::Occupied.new(:$row, :$column)
+                if $expected-stone ne $actual-stone;
+        }
+    }
+
     method place(Player :$player!, Pos :$own!, Pos :$neutral!) {
         die X::NotPlayersTurn.new
             unless $player == $!player-to-move;
@@ -124,10 +141,9 @@ class Games::Nex {
             X::Occupied,
             [$own, $neutral];
 
-        die X::Occupied.new(:row($own[0]), :column($own[1]))
-            if @!board[$own[0]][$own[1]] ne None;
-        die X::Occupied.new(:row($neutral[0]), :column($neutral[1]))
-            if @!board[$neutral[0]][$neutral[1]] ne None;
+        self!assert-stone:
+            None,
+            [$own, $neutral];
 
         @!board[$own[0]][$own[1]] = self!color-of($player);
         @!board[$neutral[0]][$neutral[1]] = Neutral;
@@ -149,30 +165,14 @@ class Games::Nex {
             X::DoubleUse,
             [$neutral1, $neutral2, $own];
 
-        my $own-color = self!color-of($player);
-        my $opponent-color = self!color-of(opponent($player));
+        self!assert-stone:
+            Neutral,
+            [$neutral1, $neutral2];
+        self!assert-stone:
+            self!color-of($player),
+            [$own, ];
 
-        die X::Unoccupied.new(:row($neutral1[0]), :column($neutral1[1]))
-            if @!board[$neutral1[0]][$neutral1[1]] eq None;
-        die X::Occupied.new(:row($neutral1[0]), :column($neutral1[1]))
-            if @!board[$neutral1[0]][$neutral1[1]] eq $opponent-color;
-        die X::AlreadyYours.new(:row($neutral1[0]), :column($neutral1[1]))
-            if @!board[$neutral1[0]][$neutral1[1]] eq $own-color;
-
-        die X::Unoccupied.new(:row($neutral2[0]), :column($neutral2[1]))
-            if @!board[$neutral2[0]][$neutral2[1]] eq None;
-        die X::Occupied.new(:row($neutral2[0]), :column($neutral2[1]))
-            if @!board[$neutral2[0]][$neutral2[1]] eq $opponent-color;
-        die X::AlreadyYours.new(:row($neutral2[0]), :column($neutral2[1]))
-            if @!board[$neutral2[0]][$neutral2[1]] eq $own-color;
-
-        die X::Unoccupied.new(:row($own[0]), :column($own[1]))
-            if @!board[$own[0]][$own[1]] eq None;
-        die X::Occupied.new(:row($own[0]), :column($own[1]))
-            if @!board[$own[0]][$own[1]] eq $opponent-color;
-        die X::AlreadyNeutral.new(:row($own[0]), :column($own[1]))
-            if @!board[$own[0]][$own[1]] eq Neutral;
-
+        my $own-color = self!color-of($!player-to-move);
         @!board[$neutral1[0]][$neutral1[1]] = $own-color;
         @!board[$neutral2[0]][$neutral2[1]] = $own-color;
         @!board[$own[0]][$own[1]] = Neutral;
