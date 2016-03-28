@@ -129,6 +129,15 @@ class Games::Nex {
         }
     }
 
+    method !set-cell(Pos $pos, $stone is copy) {
+        if $stone ~~ Player {
+            $stone = self!color-of($stone);
+        }
+        die "Expected Stone or Player, got ", $stone.^name
+            unless $stone ~~ Stone;
+        @!board[$pos[0]][$pos[1]] = $stone;
+    }
+
     method place(Player :$player!, Pos :$own!, Pos :$neutral!) {
         die X::NotPlayersTurn.new
             unless $player == $!player-to-move;
@@ -145,8 +154,8 @@ class Games::Nex {
             None,
             [$own, $neutral];
 
-        @!board[$own[0]][$own[1]] = self!color-of($player);
-        @!board[$neutral[0]][$neutral[1]] = Neutral;
+        self!set-cell($own, $player);
+        self!set-cell($neutral, Neutral);
 
         $!player-to-move = opponent($!player-to-move);
         $!moves-played++;
@@ -172,10 +181,9 @@ class Games::Nex {
             self!color-of($player),
             [$own, ];
 
-        my $own-color = self!color-of($!player-to-move);
-        @!board[$neutral1[0]][$neutral1[1]] = $own-color;
-        @!board[$neutral2[0]][$neutral2[1]] = $own-color;
-        @!board[$own[0]][$own[1]] = Neutral;
+        self!set-cell($neutral1, $player);
+        self!set-cell($neutral2, $player);
+        self!set-cell($own, Neutral);
 
         $!player-to-move = opponent($!player-to-move);
         $!moves-played++;
