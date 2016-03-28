@@ -83,7 +83,7 @@ class Games::Nex {
     method initialize-player-to-move(Player $!player-to-move) {}
     method initialize-moves-played(Int $!moves-played) {}
 
-    method !color-of(Player $player) {
+    method !stone-of(Player $player) {
         ($player == Player1 ^^ $!swapped)
             ?? Vertical
             !! Horizontal
@@ -113,7 +113,7 @@ class Games::Nex {
     }
 
     method !assert-stone(Stone:D $expected-stone, @positions) {
-        my $own-color = self!color-of($!player-to-move);
+        my $own-stone = self!stone-of($!player-to-move);
 
         for @positions -> Pos $pos {
             my ($row, $column) = @$pos;
@@ -121,9 +121,9 @@ class Games::Nex {
             die X::Unoccupied.new(:$row, :$column)
                 if $expected-stone ne None && $actual-stone eq None;
             die X::AlreadyYours.new(:$row, :$column)
-                if $expected-stone eq Neutral && $actual-stone eq $own-color;
+                if $expected-stone eq Neutral && $actual-stone eq $own-stone;
             die X::AlreadyNeutral.new(:$row, :$column)
-                if $expected-stone eq $own-color && $actual-stone eq Neutral;
+                if $expected-stone eq $own-stone && $actual-stone eq Neutral;
             die X::Occupied.new(:$row, :$column)
                 if $expected-stone ne $actual-stone;
         }
@@ -131,7 +131,7 @@ class Games::Nex {
 
     method !set-cell(Pos $pos, $stone is copy) {
         if $stone ~~ Player {
-            $stone = self!color-of($stone);
+            $stone = self!stone-of($stone);
         }
         die "Expected Stone or Player, got ", $stone.^name
             unless $stone ~~ Stone;
@@ -178,7 +178,7 @@ class Games::Nex {
             Neutral,
             [$neutral1, $neutral2];
         self!assert-stone:
-            self!color-of($player),
+            self!stone-of($player),
             [$own, ];
 
         self!set-cell($neutral1, $player);
