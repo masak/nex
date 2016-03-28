@@ -177,6 +177,7 @@ class Games::Nex {
         self!assert-stone:
             Neutral,
             [$neutral1, $neutral2];
+
         self!assert-stone:
             self!stone-of($player),
             [$own, ];
