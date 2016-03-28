@@ -98,6 +98,20 @@ class Games::Nex {
         }
     }
 
+    method !assert-uniqueness(Exception:U $exception-type, @positions) {
+        OUTER_POS:
+        for @positions -> Pos $pos1 {
+            for @positions -> Pos $pos2 {
+                next OUTER_POS
+                    if $pos1 === $pos2; # so kinda lower-triangular, right?
+
+                my ($row, $column) = @$pos1;
+                die $exception-type.new(:$row, :$column)
+                    if $pos1 eqv $pos2;
+            }
+        }
+    }
+
     method place(Player :$player!, Pos :$own!, Pos :$neutral!) {
         die X::NotPlayersTurn.new
             unless $player == $!player-to-move;
@@ -106,8 +120,10 @@ class Games::Nex {
             "The player's own piece" => $own,
             "The neutral piece" => $neutral;
 
-        die X::Occupied.new(:row($own[0]), :column($own[1]))
-            if $own eqv $neutral;
+        self!assert-uniqueness:
+            X::Occupied,
+            [$own, $neutral];
+
         die X::Occupied.new(:row($own[0]), :column($own[1]))
             if @!board[$own[0]][$own[1]] ne None;
         die X::Occupied.new(:row($neutral[0]), :column($neutral[1]))
@@ -129,15 +145,12 @@ class Games::Nex {
             "The second neutral piece" => $neutral2,
             "The player's own piece" => $own;
 
+        self!assert-uniqueness:
+            X::DoubleUse,
+            [$neutral1, $neutral2, $own];
+
         my $own-color = self!color-of($player);
         my $opponent-color = self!color-of(opponent($player));
-
-        die X::DoubleUse.new(:row($neutral1[0]), :column($neutral1[1]))
-            if $neutral1 eqv $neutral2;
-        die X::DoubleUse.new(:row($neutral1[0]), :column($neutral1[1]))
-            if $neutral1 eqv $own;
-        die X::DoubleUse.new(:row($neutral2[0]), :column($neutral2[1]))
-            if $neutral2 eqv $own;
 
         die X::Unoccupied.new(:row($neutral1[0]), :column($neutral1[1]))
             if @!board[$neutral1[0]][$neutral1[1]] eq None;
