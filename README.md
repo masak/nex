@@ -11,7 +11,7 @@ sense to think of the neutral stones as gray.
 
 In Nex there are two types of move:
 
-1. **Placement**: Put one piece of your own color, and one neutral stone on the
+1. **Placement**: Put one stone of your own color, and one neutral stone on the
 board.
 
 2. **Conversion**: Turn two neutral stones on the board into stones of your color,

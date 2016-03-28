@@ -23,8 +23,8 @@ use Games::Nex::Test;
     my $game = empty-game(5);
     throws-like { $game.convert(:player(Player1), neutral1 => [7, 1], neutral2 => [3, 4], own => [1, 2]) },
         X::OutsideBoard,
-        "erroneous move: neutral piece 1 outside the board",
-        piece => "The first neutral piece",
+        "erroneous move: neutral stone 1 outside the board",
+        stone => "The first neutral stone",
         coord => 7,
         min => 0,
         max => 4,
@@ -35,8 +35,8 @@ use Games::Nex::Test;
     my $game = empty-game(5);
     throws-like { $game.convert(:player(Player1), neutral1 => [2, 1], neutral2 => [3, -4], own => [1, 2]) },
         X::OutsideBoard,
-        "erroneous move: neutral piece 2 outside the board",
-        piece => "The second neutral piece",
+        "erroneous move: neutral stone 2 outside the board",
+        stone => "The second neutral stone",
         coord => -4,
         min => 0,
         max => 4,
@@ -47,8 +47,8 @@ use Games::Nex::Test;
     my $game = empty-game(5);
     throws-like { $game.convert(:player(Player1), neutral1 => [2, 1], neutral2 => [3, 4], own => [1, 22]) },
         X::OutsideBoard,
-        "erroneous move: player's own piece outside the board",
-        piece => "The player's own piece",
+        "erroneous move: player's own stone outside the board",
+        stone => "The player's own stone",
         coord => 22,
         min => 0,
         max => 4,
@@ -67,14 +67,14 @@ use Games::Nex::Test;
                . n . . . . . .
         BOARD
     lives-ok { $game.convert(:player(Player1), neutral1 => [7, 1], neutral2 => [3, 4], own => [1, 2]) },
-        "piece is not outside the board if the board is bigger, however";
+        "stone is not outside the board if the board is bigger, however";
 }
 
 {
     my $game = empty-game(5);
     throws-like { $game.convert(:player(Player1), neutral1 => [1, 1], neutral2 => [1, 1], own => [1, 2]) },
         X::DoubleUse,
-        "erroneous move: choosing the same neutral piece twice",
+        "erroneous move: choosing the same neutral stone twice",
         row => 1,
         column => 1,
     ;
@@ -84,7 +84,7 @@ use Games::Nex::Test;
     my $game = empty-game(5);
     throws-like { $game.convert(:player(Player1), neutral1 => [3, 3], neutral2 => [1, 2], own => [3, 3]) },
         X::DoubleUse,
-        "erroneous move: choosing the same first neutral piece as own piece",
+        "erroneous move: choosing the same first neutral stone as own stone",
         row => 3,
         column => 3,
     ;
@@ -94,7 +94,7 @@ use Games::Nex::Test;
     my $game = empty-game(5);
     throws-like { $game.convert(:player(Player1), neutral1 => [3, 3], neutral2 => [1, 2], own => [1, 2]) },
         X::DoubleUse,
-        "erroneous move: choosing the same second neutral piece as own piece",
+        "erroneous move: choosing the same second neutral stone as own stone",
         row => 1,
         column => 2,
     ;
@@ -110,7 +110,7 @@ use Games::Nex::Test;
         BOARD
     throws-like { $game.convert(:player(Player1), neutral1 => [2, 1], neutral2 => [3, 4], own => [1, 2]) },
         X::Unoccupied,
-        "erroneous move: first neutral piece on an empty spot",
+        "erroneous move: first neutral stone on an empty spot",
         row => 2,
         column => 1,
     ;
@@ -126,7 +126,7 @@ use Games::Nex::Test;
         BOARD
     throws-like { $game.convert(:player(Player1), neutral1 => [2, 1], neutral2 => [3, 4], own => [1, 2]) },
         X::Occupied,
-        "erroneous move: first neutral piece belongs to opponent",
+        "erroneous move: first neutral stone belongs to opponent",
         row => 2,
         column => 1,
     ;
@@ -142,7 +142,7 @@ use Games::Nex::Test;
         BOARD
     throws-like { $game.convert(:player(Player1), neutral1 => [2, 1], neutral2 => [3, 4], own => [1, 2]) },
         X::AlreadyYours,
-        "erroneous move: first neutral piece already belongs to player",
+        "erroneous move: first neutral stone already belongs to player",
         row => 2,
         column => 1,
     ;
@@ -158,7 +158,7 @@ use Games::Nex::Test;
         BOARD
     throws-like { $game.convert(:player(Player1), neutral1 => [2, 1], neutral2 => [3, 4], own => [1, 2]) },
         X::Unoccupied,
-        "erroneous move: second neutral piece on an empty spot",
+        "erroneous move: second neutral stone on an empty spot",
         row => 3,
         column => 4,
     ;
@@ -174,7 +174,7 @@ use Games::Nex::Test;
         BOARD
     throws-like { $game.convert(:player(Player1), neutral1 => [2, 1], neutral2 => [3, 4], own => [1, 2]) },
         X::Occupied,
-        "erroneous move: second neutral piece belongs to opponent",
+        "erroneous move: second neutral stone belongs to opponent",
         row => 2,
         column => 1,
     ;
@@ -190,7 +190,7 @@ use Games::Nex::Test;
         BOARD
     throws-like { $game.convert(:player(Player1), neutral1 => [2, 1], neutral2 => [3, 4], own => [1, 2]) },
         X::AlreadyYours,
-        "erroneous move: second neutral piece belongs to player",
+        "erroneous move: second neutral stone belongs to player",
         row => 3,
         column => 4,
     ;
@@ -206,7 +206,7 @@ use Games::Nex::Test;
         BOARD
     throws-like { $game.convert(:player(Player1), neutral1 => [2, 1], neutral2 => [3, 4], own => [1, 2]) },
         X::Unoccupied,
-        "erroneous move: own piece on an empty spot",
+        "erroneous move: own stone on an empty spot",
         row => 1,
         column => 2,
     ;
@@ -222,7 +222,7 @@ use Games::Nex::Test;
         BOARD
     throws-like { $game.convert(:player(Player1), neutral1 => [2, 1], neutral2 => [3, 4], own => [1, 2]) },
         X::Occupied,
-        "erroneous move: own piece belongs to opponent",
+        "erroneous move: own stone belongs to opponent",
         row => 1,
         column => 2,
     ;
@@ -238,7 +238,7 @@ use Games::Nex::Test;
         BOARD
     throws-like { $game.convert(:player(Player1), neutral1 => [2, 1], neutral2 => [3, 4], own => [1, 2]) },
         X::AlreadyNeutral,
-        "erroneous move: own piece already neutral",
+        "erroneous move: own stone already neutral",
         row => 1,
         column => 2,
     ;

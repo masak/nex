@@ -13,13 +13,13 @@ enum Stone «
 subset Pos of Positional where { .elems == 2 && .all ~~ Int };
 
 class X::OutsideBoard is Exception {
-    has Str $.piece;
+    has Str $.stone;
     has Int $.coord;
     has Int $.min;
     has Int $.max;
 
     method message() {
-        "$.piece was outside the board: $.coord (min: $.min, max: $.max)"
+        "$.stone was outside the board: $.coord (min: $.min, max: $.max)"
     }
 }
 
@@ -90,9 +90,9 @@ class Games::Nex {
     }
 
     method !assert-within-bounds(*@pairs) {
-        for @pairs -> (Str :key($piece), Pos :value($pos)) {
+        for @pairs -> (Str :key($stone), Pos :value($pos)) {
             for @$pos -> $coord {
-                die X::OutsideBoard.new(:$piece, :$coord, :$!min, :$!max)
+                die X::OutsideBoard.new(:$stone, :$coord, :$!min, :$!max)
                     unless $coord ~~ $!min..$!max;
             }
         }
@@ -134,8 +134,8 @@ class Games::Nex {
             unless $player == $!player-to-move;
 
         self!assert-within-bounds:
-            "The player's own piece" => $own,
-            "The neutral piece" => $neutral;
+            "The player's own stone" => $own,
+            "The neutral stone" => $neutral;
 
         self!assert-uniqueness:
             X::Occupied,
@@ -157,9 +157,9 @@ class Games::Nex {
             unless $player == $!player-to-move;
 
         self!assert-within-bounds:
-            "The first neutral piece" => $neutral1,
-            "The second neutral piece" => $neutral2,
-            "The player's own piece" => $own;
+            "The first neutral stone" => $neutral1,
+            "The second neutral stone" => $neutral2,
+            "The player's own stone" => $own;
 
         self!assert-uniqueness:
             X::DoubleUse,
