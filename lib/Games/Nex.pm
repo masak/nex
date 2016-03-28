@@ -89,19 +89,22 @@ class Games::Nex {
             !! Horizontal
     }
 
+    method !assert-within-bounds(*@pairs) {
+        for @pairs -> (Str :key($piece), Pos :value($pos)) {
+            for @$pos -> $coord {
+                die X::OutsideBoard.new(:$piece, :$coord, :$!min, :$!max)
+                    unless $coord ~~ $!min..$!max;
+            }
+        }
+    }
+
     method place(Player :$player!, Pos :$own!, Pos :$neutral!) {
         die X::NotPlayersTurn.new
             unless $player == $!player-to-move;
 
-        for $own, $neutral Z
-            "The player's own piece", "The neutral piece"
-            -> (@pos, $piece) {
-
-            for @pos -> $coord {
-                die X::OutsideBoard.new(:$piece :$coord, :$!min, :$!max)
-                    unless $coord ~~ $!min..$!max;
-            }
-        }
+        self!assert-within-bounds:
+            "The player's own piece" => $own,
+            "The neutral piece" => $neutral;
 
         die X::Occupied.new(:row($own[0]), :column($own[1]))
             if $own eqv $neutral;
@@ -121,15 +124,10 @@ class Games::Nex {
         die X::NotPlayersTurn.new
             unless $player == $!player-to-move;
 
-        for $neutral1, $neutral2, $own Z
-            "The first neutral piece", "The second neutral piece", "The player's own piece"
-            -> (@pos, $piece) {
-
-            for @pos -> $coord {
-                die X::OutsideBoard.new(:$piece :$coord, :$!min, :$!max)
-                    unless $coord ~~ $!min..$!max;
-            }
-        }
+        self!assert-within-bounds:
+            "The first neutral piece" => $neutral1,
+            "The second neutral piece" => $neutral2,
+            "The player's own piece" => $own;
 
         my $own-color = self!color-of($player);
         my $opponent-color = self!color-of(opponent($player));
