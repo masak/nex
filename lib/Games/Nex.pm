@@ -10,7 +10,7 @@ enum Stone «
     :Neutral<n>
 »;
 
-subset Pos of Positional where { .elems == 2 && .all ~~ Int };
+subset Pos of Positional where .elems == 2 && .all ~~ Int;
 
 class X::OutsideBoard is Exception {
     has Str $.stone;
