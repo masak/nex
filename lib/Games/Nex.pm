@@ -71,7 +71,7 @@ class X::TooLateForSwap is Exception {
 }
 
 class Games::Nex {
-    has Int $.size;
+    has Int $.size = 13;
     has Int $!min = 0;
     has Int $!max = $!size - 1;
     has @!board = [None xx $!size] xx $!size;
