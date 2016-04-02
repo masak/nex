@@ -1,7 +1,5 @@
-enum Player <Player1 Player2>;
-sub opponent(Player $p --> Player) {
-    $p == Player1 ?? Player2 !! Player1;
-}
+enum Player (Player1 => +1, Player2 => -1);
+sub opponent(Player $p --> Player) { Player(-$p) }
 
 enum Stone «
     :None<.>
