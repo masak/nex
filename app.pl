@@ -21,7 +21,7 @@ get '/' => sub {
         SELECT move_data
         FROM Moves
         WHERE game_id = 1
-        ORDER BY seq_no ASCENDING
+        ORDER BY seq_no ASC
         .
     $sth.execute();
     my @moves = $sth.allrows();
