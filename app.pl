@@ -1,10 +1,33 @@
 use Bailador;
+use DBIish;
 
 use lib 'lib';
 use Games::Nex;
 
 get '/' => sub {
-    return q:to 'HTML';
+    my $DATABASE_URL = %*ENV<DATABASE_URL>;
+    $DATABASE_URL ~~ /^ 'postgres://'
+        $<user>=(\w+) ':' $<password>=(<-[@]>+)
+        '@' $<host>=(<-[:]>+) ':' $<port>=(\d+)
+        '/' $<database>=(.+) $/
+        or die "Couldn't parse DATABASE_URL env variable";
+
+    my ($user, $password, $host, $port, $database) =
+        ~$<user>, ~$<password>, ~$<host>, +$<port>, ~$<database>;
+
+    my $dbh = DBIish.connect("Pg", :$host, :$port, :$database, :$user, :$password);
+
+    my $sth = $dbh.prepare(q:to '.');
+        SELECT move_data
+        FROM Moves
+        WHERE game_id = 1
+        ORDER BY seq_no ASCENDING
+        .
+    $sth.execute();
+    my @moves = $sth.allrows();
+
+    my $game = Games::Nex.new(:size(13));
+    return q:c:to 'HTML';
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -12,19 +35,8 @@ get '/' => sub {
             <title>Nex</title>
         </head>
         <body>
-            <pre><code>. . . . . . . . . . . . .
-         . . . . . . . . . . . . .
-          . . . . . . . . . . . . .
-           . . . . . . . . . . . . .
-            . . . . . . . . . . . . .
-             . . . . . . . . . . . . .
-              . . . . . . . . . . . . .
-               . . . . . . . . . . . . .
-                . . . . . . . . . . . . .
-                 . . . . . . . . . . . . .
-                  . . . . . . . . . . . . .
-                   . . . . . . . . . . . . .
-                    . . . . . . . . . . . . .</code></pre>
+            <pre><code>{$game.dump}</code></pre>
+            <pre><code>{+@moves}</code></pre>
 
             <form action="/game" method="post">
                 <label for="placement-player">Player: </label>
