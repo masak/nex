@@ -19,7 +19,7 @@ get '/' => sub {
 
     my $sth = $dbh.prepare(q:to '.');
         SELECT move_data
-        FROM Moves
+        FROM Move
         WHERE game_id = 1
         ORDER BY seq_no ASC
         .
