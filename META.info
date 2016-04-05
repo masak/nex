@@ -1,4 +1,4 @@
 {
-    "name": "WebApp",
-    "depends": [ "Bailador" ]
+    "name": "Nex",
+    "depends": [ "Bailador", "DBIish" ]
 }
