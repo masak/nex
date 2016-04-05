@@ -25,8 +25,8 @@ get '/' => sub {
         .
     $sth.execute();
     my @moves = $sth.allrows();
+    my $game = Games::Nex.from-moves(@moves);
 
-    my $game = Games::Nex.new(:size(13));
     return q:c:to 'HTML';
         <!DOCTYPE html>
         <html lang="en">
@@ -36,7 +36,6 @@ get '/' => sub {
         </head>
         <body>
             <pre><code>{$game.dump}</code></pre>
-            <pre><code>{+@moves}</code></pre>
 
             <form action="/game" method="post">
                 <label for="placement-player">Player: </label>

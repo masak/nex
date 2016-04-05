@@ -1,5 +1,5 @@
 enum Player (Player1 => +1, Player2 => -1);
-sub opponent(Player $p --> Player) { Player(-$p) }
+sub opponent(Player $p --> Player) is export { Player(-$p) }
 
 enum Stone «
     :None<.>
@@ -87,6 +87,8 @@ class Games::Nex {
             !! Horizontal
     }
 
+    method !player-to-move() { $!player-to-move }
+
     method !assert-within-bounds(*@pairs) {
         for @pairs -> (Str :key($stone), Pos :value($pos)) {
             for @$pos -> $coord {
@@ -152,6 +154,10 @@ class Games::Nex {
             None,
             [$own, $neutral];
 
+        self!place(:$player, :$own, :$neutral);
+    }
+
+    method !place(Player :$player!, Pos :$own!, Pos :$neutral!) {
         self!set-cell($own, $player);
         self!set-cell($neutral, Neutral);
 
@@ -180,6 +186,10 @@ class Games::Nex {
             self!stone-of($player),
             [$own, ];
 
+        self!convert(:$player, :$neutral1, :$neutral2, :$own);
+    }
+
+    method !convert(Player :$player!, Pos :$neutral1!, Pos :$neutral2!, Pos :$own!) {
         self!set-cell($neutral1, $player);
         self!set-cell($neutral2, $player);
         self!set-cell($own, Neutral);
@@ -194,9 +204,31 @@ class Games::Nex {
         die X::TooLateForSwap.new
             if $!moves-played > 1;
 
+        self!swap();
+    }
+
+    method !swap() {
         $!swapped = True;
         $!player-to-move = opponent($!player-to-move);
         $!moves-played++;
+    }
+
+    method from-moves(@moves, :$size = 13) {
+        my $game = self.new(:$size);
+        for @moves -> $move {
+            my %move = from-json($move);
+            my $player = $game!player-to-move;
+            given %move<type> {
+                when "placement" {
+                    my ($own, $neutral) = %move<own neutral>;
+                    $game!place(:$player, :$own, :$neutral);
+                }
+                default {
+                    # unknown, do nothing
+                }
+            }
+        }
+        return $game;
     }
 
     method dump() {
