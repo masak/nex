@@ -4,7 +4,7 @@ use Games::Nex;
 use Bailador;
 use DBIish;
 
-get '/' => sub {
+sub connect() {
     my $DATABASE_URL = %*ENV<DATABASE_URL>;
     $DATABASE_URL ~~ /^ 'postgres://'
         $<user>=(\w+) ':' $<password>=(<-[@]>+)
@@ -16,7 +16,10 @@ get '/' => sub {
         ~$<user>, ~$<password>, ~$<host>, +$<port>, ~$<database>;
 
     my $dbh = DBIish.connect("Pg", :$host, :$port, :$database, :$user, :$password);
+    return $dbh;
+}
 
+sub game-from-database($dbh) {
     my $sth = $dbh.prepare(q:to '.');
         SELECT move_data
         FROM Move
@@ -25,7 +28,12 @@ get '/' => sub {
         .
     $sth.execute();
     my @moves = $sth.allrows();
-    my $game = Games::Nex.from-moves(@moves);
+    return Games::Nex.from-moves(@moves);
+}
+
+get '/' => sub {
+    my $dbh = connect();
+    my $game = game-from-database($dbh);
 
     return q:c:to 'HTML';
         <!DOCTYPE html>
@@ -65,38 +73,16 @@ post '/game' => sub {
     my Pos $own = [+%params<own-stone-row>, +%params<own-stone-column>];
     my Pos $neutral = [+%params<neutral-stone-row>, +%params<neutral-stone-column>];
 
-    my $DATABASE_URL = %*ENV<DATABASE_URL>;
-    $DATABASE_URL ~~ /^ 'postgres://'
-        $<user>=(\w+) ':' $<password>=(<-[@]>+)
-        '@' $<host>=(<-[:]>+) ':' $<port>=(\d+)
-        '/' $<database>=(.+) $/
-        or die "Couldn't parse DATABASE_URL env variable";
-
-    my ($user, $password, $host, $port, $database) =
-        ~$<user>, ~$<password>, ~$<host>, +$<port>, ~$<database>;
-
-    my $dbh = DBIish.connect("Pg", :$host, :$port, :$database, :$user, :$password);
-
-    my $sth = $dbh.prepare(q:to '.');
-        SELECT move_data
-        FROM Move
-        WHERE game_id = 1
-        ORDER BY seq_no ASC
-        .
-    $sth.execute();
-    my @moves = $sth.allrows();
-    my $game = Games::Nex.from-moves(@moves);
-
+    my $dbh = connect();
+    my $game = game-from-database($dbh);
     $game.place(:$player, :$own, :$neutral);
 
-    {
-        my $move_data = qq[\{ "type": "placement", "own": [{$own.join(', ')}], "neutral": [{$neutral.join(', ')}] \}];
-        my $sth = $dbh.prepare(q:to '.');
-            INSERT INTO Move (game_id, seq_no, player_no, move_data)
-            VALUES (?, ?, ?, ?)
-            .
-        $sth.execute(1, @moves + 1, +%params<player>, $move_data);
-    }
+    my $move_data = qq[\{ "type": "placement", "own": [{$own.join(', ')}], "neutral": [{$neutral.join(', ')}] \}];
+    my $sth = $dbh.prepare(q:to '.');
+        INSERT INTO Move (game_id, seq_no, player_no, move_data)
+        VALUES (?, ?, ?, ?)
+        .
+    $sth.execute(1, $game.moves-played + 1, +%params<player>, $move_data);
 
     status(302);
     header("Location", "/");

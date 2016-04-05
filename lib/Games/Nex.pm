@@ -74,7 +74,7 @@ class Games::Nex {
     has Int $!max = $!size - 1;
     has @!board = [None xx $!size] xx $!size;
     has Player $!player-to-move = Player1;
-    has Int $!moves-played = 0;
+    has Int $.moves-played = 0;
     has Bool $!swapped = False;
 
     method initialize-board(@!board) {}
