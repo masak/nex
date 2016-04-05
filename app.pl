@@ -1,8 +1,8 @@
-use Bailador;
-use DBIish;
-
 use lib 'lib';
 use Games::Nex;
+
+use Bailador;
+use DBIish;
 
 get '/' => sub {
     my $DATABASE_URL = %*ENV<DATABASE_URL>;
