@@ -1,8 +1,8 @@
 {
     "name": "Nex",
     "depends": [ "Bailador", "DBIish" ],
-    "provides": [
+    "provides": {
         "Games::Nex":           "lib/Games/Nex.pm",
         "Games::Nex::Test":     "lib/Games/Nex/Test.pm"
-    ]
+    }
 }
