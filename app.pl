@@ -84,6 +84,14 @@ get '/' => sub {
                     <input type="text" name="own-stone-column" id="conversion-own-stone-column"><br>
                 <input type="submit" value="Send">
             </form>
+
+            <hr>
+
+            <h2>Swap</h2>
+            <form action="/game" method="post">
+                <input type="hidden" name="type" value="swap"><br>
+                <input type="submit" value="Send">
+            </form>
         </body>
         HTML
 }
@@ -95,47 +103,63 @@ post '/game' => sub {
         @components[0] => @components[1];
     });
 
-    if %params<type> eq "placement" {
-        # XXX: input validation
-        my $player = %params<player> eq "1" ?? Player1 !! Player2;
-        my Pos $own = [+%params<own-stone-row>, +%params<own-stone-column>];
-        my Pos $neutral = [+%params<neutral-stone-row>, +%params<neutral-stone-column>];
+    given %params<type> {
+        when "placement" {
+            # XXX: input validation
+            my $player = %params<player> eq "1" ?? Player1 !! Player2;
+            my Pos $own = [+%params<own-stone-row>, +%params<own-stone-column>];
+            my Pos $neutral = [+%params<neutral-stone-row>, +%params<neutral-stone-column>];
 
-        my $dbh = connect();
-        my $game = game-from-database($dbh);
-        $game.place(:$player, :$own, :$neutral);
+            my $dbh = connect();
+            my $game = game-from-database($dbh);
+            $game.place(:$player, :$own, :$neutral);
 
-        my $move_data = qq[\{ "type": "placement", "own": [{
-            $own.join(', ')}], "neutral": [{
-            $neutral.join(', ')}] \}];
-        my $sth = $dbh.prepare(q:to '.');
-            INSERT INTO Move (game_id, seq_no, player_no, move_data)
-            VALUES (?, ?, ?, ?)
-            .
-        $sth.execute(1, $game.moves-played + 1, +%params<player>, $move_data);
-    }
-    elsif %params<type> eq "conversion" {
-        # XXX: input validation
-        my $player = %params<player> eq "1" ?? Player1 !! Player2;
-        my Pos $neutral1 = [+%params<neutral-stone1-row>, +%params<neutral-stone1-column>];
-        my Pos $neutral2 = [+%params<neutral-stone2-row>, +%params<neutral-stone2-column>];
-        my Pos $own = [+%params<own-stone-row>, +%params<own-stone-column>];
+            my $move_data = qq[\{ "type": "placement", "own": [{
+                $own.join(', ')}], "neutral": [{
+                $neutral.join(', ')}] \}];
+            my $sth = $dbh.prepare(q:to '.');
+                INSERT INTO Move (game_id, seq_no, player_no, move_data)
+                VALUES (?, ?, ?, ?)
+                .
+            $sth.execute(1, $game.moves-played + 1, +%params<player>, $move_data);
+        }
+        when "conversion" {
+            # XXX: input validation
+            my $player = %params<player> eq "1" ?? Player1 !! Player2;
+            my Pos $neutral1 = [+%params<neutral-stone1-row>, +%params<neutral-stone1-column>];
+            my Pos $neutral2 = [+%params<neutral-stone2-row>, +%params<neutral-stone2-column>];
+            my Pos $own = [+%params<own-stone-row>, +%params<own-stone-column>];
 
-        my $dbh = connect();
-        my $game = game-from-database($dbh);
-        $game.convert(:$player, :$neutral1, :$neutral2, :$own);
+            my $dbh = connect();
+            my $game = game-from-database($dbh);
+            $game.convert(:$player, :$neutral1, :$neutral2, :$own);
 
-        my $move_data = qq[\{ "type": "conversion", "neutral1": [{
-            $neutral1.join(', ')}], "neutral2": [{$neutral2.join(', ')
-            }], "own": [{$own.join(', ')}] \}];
-        my $sth = $dbh.prepare(q:to '.');
-            INSERT INTO Move (game_id, seq_no, player_no, move_data)
-            VALUES (?, ?, ?, ?)
-            .
-        $sth.execute(1, $game.moves-played + 1, +%params<player>, $move_data);
-    }
-    else {
-        die "Unknown move type '%params<type>'";
+            my $move_data = qq[\{ "type": "conversion", "neutral1": [{
+                $neutral1.join(', ')}], "neutral2": [{$neutral2.join(', ')
+                }], "own": [{$own.join(', ')}] \}];
+            my $sth = $dbh.prepare(q:to '.');
+                INSERT INTO Move (game_id, seq_no, player_no, move_data)
+                VALUES (?, ?, ?, ?)
+                .
+            $sth.execute(1, $game.moves-played + 1, +%params<player>, $move_data);
+        }
+        when "swap" {
+            # XXX: input validation
+
+            my $dbh = connect();
+            my $game = game-from-database($dbh);
+            $game.swap();
+
+            my $move_data = '{ "type": "swap" }';
+            my $sth = $dbh.prepare(q:to '.');
+                INSERT INTO Move (game_id, seq_no, player_no, move_data)
+                VALUES (?, ?, ?, ?)
+                .
+            $sth.execute(1, $game.moves-played + 1, 2, $move_data);
+        }
+        default {
+            die "Unknown move type '%params<type>'";
+        }
     }
 
     status(302);
