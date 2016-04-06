@@ -223,6 +223,10 @@ class Games::Nex {
                     my ($own, $neutral) = %move<own neutral>;
                     $game!place(:$player, :$own, :$neutral);
                 }
+                when "conversion" {
+                    my ($neutral1, $neutral2, $own) = %move<neutral1 neutral2 own>;
+                    $game!convert(:$player, :$neutral1, :$neutral2, :$own);
+                }
                 default {
                     # unknown, do nothing
                 }

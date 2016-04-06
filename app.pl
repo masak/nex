@@ -45,7 +45,11 @@ get '/' => sub {
         <body>
             <pre><code>{$game.dump}</code></pre>
 
+            <hr>
+
+            <h2>Placement</h2>
             <form action="/game" method="post">
+                <input type="hidden" name="type" value="placement"><br>
                 <label for="placement-player">Player: </label>
                     <input type="text" name="player" id="placement-player"><br>
                 <label for="placement-own-stone-row">Own stone row: </label>
@@ -58,6 +62,28 @@ get '/' => sub {
                     <input type="text" name="neutral-stone-column" id="placement-neutral-stone-column"><br>
                 <input type="submit" value="Send">
             </form>
+
+            <hr>
+
+            <h2>Conversion</h2>
+            <form action="/game" method="post">
+                <input type="hidden" name="type" value="conversion"><br>
+                <label for="conversion-player">Player: </label>
+                    <input type="text" name="player" id="conversion-player"><br>
+                <label for="conversion-neutral-stone1-row">Neutral stone 1 row: </label>
+                    <input type="text" name="neutral-stone1-row" id="conversion-neutral-stone1-row"><br>
+                <label for="conversion-neutral-stone1-column">Neutral stone 1 column: </label>
+                    <input type="text" name="neutral-stone1-column" id="conversion-neutral-stone1-column"><br>
+                <label for="conversion-neutral-stone2-row">Neutral stone 2 row: </label>
+                    <input type="text" name="neutral-stone2-row" id="conversion-neutral-stone2-row"><br>
+                <label for="conversion-neutral-stone2-column">Neutral stone 2 column: </label>
+                    <input type="text" name="neutral-stone2-column" id="conversion-neutral-stone2-column"><br>
+                <label for="conversion-own-stone-row">Own stone row: </label>
+                    <input type="text" name="own-stone-row" id="conversion-own-stone-row"><br>
+                <label for="conversion-own-stone-column">Own stone column: </label>
+                    <input type="text" name="own-stone-column" id="conversion-own-stone-column"><br>
+                <input type="submit" value="Send">
+            </form>
         </body>
         HTML
 }
@@ -68,21 +94,49 @@ post '/game' => sub {
         my @components = .split('=');
         @components[0] => @components[1];
     });
-    # XXX: input validation
-    my $player = %params<player> eq "1" ?? Player1 !! Player2;
-    my Pos $own = [+%params<own-stone-row>, +%params<own-stone-column>];
-    my Pos $neutral = [+%params<neutral-stone-row>, +%params<neutral-stone-column>];
 
-    my $dbh = connect();
-    my $game = game-from-database($dbh);
-    $game.place(:$player, :$own, :$neutral);
+    if %params<type> eq "placement" {
+        # XXX: input validation
+        my $player = %params<player> eq "1" ?? Player1 !! Player2;
+        my Pos $own = [+%params<own-stone-row>, +%params<own-stone-column>];
+        my Pos $neutral = [+%params<neutral-stone-row>, +%params<neutral-stone-column>];
 
-    my $move_data = qq[\{ "type": "placement", "own": [{$own.join(', ')}], "neutral": [{$neutral.join(', ')}] \}];
-    my $sth = $dbh.prepare(q:to '.');
-        INSERT INTO Move (game_id, seq_no, player_no, move_data)
-        VALUES (?, ?, ?, ?)
-        .
-    $sth.execute(1, $game.moves-played + 1, +%params<player>, $move_data);
+        my $dbh = connect();
+        my $game = game-from-database($dbh);
+        $game.place(:$player, :$own, :$neutral);
+
+        my $move_data = qq[\{ "type": "placement", "own": [{
+            $own.join(', ')}], "neutral": [{
+            $neutral.join(', ')}] \}];
+        my $sth = $dbh.prepare(q:to '.');
+            INSERT INTO Move (game_id, seq_no, player_no, move_data)
+            VALUES (?, ?, ?, ?)
+            .
+        $sth.execute(1, $game.moves-played + 1, +%params<player>, $move_data);
+    }
+    elsif %params<type> eq "conversion" {
+        # XXX: input validation
+        my $player = %params<player> eq "1" ?? Player1 !! Player2;
+        my Pos $neutral1 = [+%params<neutral-stone1-row>, +%params<neutral-stone1-column>];
+        my Pos $neutral2 = [+%params<neutral-stone2-row>, +%params<neutral-stone2-column>];
+        my Pos $own = [+%params<own-stone-row>, +%params<own-stone-column>];
+
+        my $dbh = connect();
+        my $game = game-from-database($dbh);
+        $game.convert(:$player, :$neutral1, :$neutral2, :$own);
+
+        my $move_data = qq[\{ "type": "conversion", "neutral1": [{
+            $neutral1.join(', ')}], "neutral2": [{$neutral2.join(', ')
+            }], "own": [{$own.join(', ')}] \}];
+        my $sth = $dbh.prepare(q:to '.');
+            INSERT INTO Move (game_id, seq_no, player_no, move_data)
+            VALUES (?, ?, ?, ?)
+            .
+        $sth.execute(1, $game.moves-played + 1, +%params<player>, $move_data);
+    }
+    else {
+        die "Unknown move type '%params<type>'";
+    }
 
     status(302);
     header("Location", "/");
