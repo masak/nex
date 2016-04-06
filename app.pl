@@ -31,6 +31,21 @@ sub game-from-database($dbh) {
     return Games::Nex.from-moves(@moves);
 }
 
+sub persist-move($dbh, Int $moves-played, Int $player, @pairs) {
+    sub v($_) {
+        when Pos { '[' ~ .join(', ') ~ ']' }
+        default { .perl }
+    }
+    my $move-data = '{ '
+        ~ @pairs.map({ qq[{.key.perl}: {v(.value)}] }).join(", ")
+        ~ ' }';
+    my $sth = $dbh.prepare(q:to '.');
+        INSERT INTO Move (game_id, seq_no, player_no, move_data)
+        VALUES (?, ?, ?, ?)
+        .
+    $sth.execute(1, $moves-played, $player, $move-data);
+}
+
 get '/' => sub {
     my $dbh = connect();
     my $game = game-from-database($dbh);
@@ -114,14 +129,11 @@ post '/game' => sub {
             my $game = game-from-database($dbh);
             $game.place(:$player, :$own, :$neutral);
 
-            my $move_data = qq[\{ "type": "placement", "own": [{
-                $own.join(', ')}], "neutral": [{
-                $neutral.join(', ')}] \}];
-            my $sth = $dbh.prepare(q:to '.');
-                INSERT INTO Move (game_id, seq_no, player_no, move_data)
-                VALUES (?, ?, ?, ?)
-                .
-            $sth.execute(1, $game.moves-played, +%params<player>, $move_data);
+            persist-move(
+                $dbh,
+                $game.moves-played,
+                +%params<player>,
+                [:type<placement>, :$own, :$neutral]);
         }
         when "conversion" {
             # XXX: input validation
@@ -134,14 +146,11 @@ post '/game' => sub {
             my $game = game-from-database($dbh);
             $game.convert(:$player, :$neutral1, :$neutral2, :$own);
 
-            my $move_data = qq[\{ "type": "conversion", "neutral1": [{
-                $neutral1.join(', ')}], "neutral2": [{$neutral2.join(', ')
-                }], "own": [{$own.join(', ')}] \}];
-            my $sth = $dbh.prepare(q:to '.');
-                INSERT INTO Move (game_id, seq_no, player_no, move_data)
-                VALUES (?, ?, ?, ?)
-                .
-            $sth.execute(1, $game.moves-played, +%params<player>, $move_data);
+            persist-move(
+                $dbh,
+                $game.moves-played,
+                +%params<player>,
+                [:type<conversion>, :$neutral1, :$neutral2, :$own]);
         }
         when "swap" {
             # XXX: input validation
@@ -150,12 +159,7 @@ post '/game' => sub {
             my $game = game-from-database($dbh);
             $game.swap();
 
-            my $move_data = '{ "type": "swap" }';
-            my $sth = $dbh.prepare(q:to '.');
-                INSERT INTO Move (game_id, seq_no, player_no, move_data)
-                VALUES (?, ?, ?, ?)
-                .
-            $sth.execute(1, $game.moves-played, 2, $move_data);
+            persist-move($dbh, $game.moves-played, 2, [:type<swap>]);
         }
         default {
             die "Unknown move type '%params<type>'";
