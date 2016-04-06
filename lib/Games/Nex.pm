@@ -129,6 +129,16 @@ class Games::Nex {
         }
     }
 
+    method !assert-player2() {
+        die X::NotPlayersTurn.new
+            unless Player2 == $!player-to-move;
+    }
+
+    method !assert-not-after-second-move() {
+        die X::TooLateForSwap.new
+            if $!moves-played > 1;
+    }
+
     method !set-cell(Pos $pos, $stone is copy) {
         if $stone ~~ Player {
             $stone = self!stone-of($stone);
@@ -199,10 +209,8 @@ class Games::Nex {
     }
 
     method swap() {
-        die X::NotPlayersTurn.new
-            unless Player2 == $!player-to-move;
-        die X::TooLateForSwap.new
-            if $!moves-played > 1;
+        self!assert-player2;
+        self!assert-not-after-second-move;
 
         self!swap();
     }
