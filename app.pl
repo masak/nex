@@ -121,7 +121,7 @@ post '/game' => sub {
                 INSERT INTO Move (game_id, seq_no, player_no, move_data)
                 VALUES (?, ?, ?, ?)
                 .
-            $sth.execute(1, $game.moves-played + 1, +%params<player>, $move_data);
+            $sth.execute(1, $game.moves-played, +%params<player>, $move_data);
         }
         when "conversion" {
             # XXX: input validation
@@ -141,7 +141,7 @@ post '/game' => sub {
                 INSERT INTO Move (game_id, seq_no, player_no, move_data)
                 VALUES (?, ?, ?, ?)
                 .
-            $sth.execute(1, $game.moves-played + 1, +%params<player>, $move_data);
+            $sth.execute(1, $game.moves-played, +%params<player>, $move_data);
         }
         when "swap" {
             # XXX: input validation
@@ -155,7 +155,7 @@ post '/game' => sub {
                 INSERT INTO Move (game_id, seq_no, player_no, move_data)
                 VALUES (?, ?, ?, ?)
                 .
-            $sth.execute(1, $game.moves-played + 1, 2, $move_data);
+            $sth.execute(1, $game.moves-played, 2, $move_data);
         }
         default {
             die "Unknown move type '%params<type>'";
