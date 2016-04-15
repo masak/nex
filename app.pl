@@ -88,6 +88,7 @@ post '/game' => sub {
                 $game.moves-played,
                 +%params<player>,
                 [:type<placement>, :$own, :$neutral]);
+            $dbh.disconnect();
         }
         when "conversion" {
             # XXX: input validation
@@ -105,6 +106,7 @@ post '/game' => sub {
                 $game.moves-played,
                 +%params<player>,
                 [:type<conversion>, :$neutral1, :$neutral2, :$own]);
+            $dbh.disconnect();
         }
         when "swap" {
             # XXX: input validation
@@ -114,12 +116,12 @@ post '/game' => sub {
             $game.swap();
 
             persist-move($dbh, $game.moves-played, 2, [:type<swap>]);
+            $dbh.disconnect();
         }
         default {
             die "Unknown move type '%params<type>'";
         }
     }
-    $dbh.disconnect();
 
     return "ACK";
 
