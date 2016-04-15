@@ -464,7 +464,7 @@ function highlightLatest(i, j) {
 }
 
 function placeStone(row, column, color) {
-    board[row][column] = stoneColor;
+    board[row][column] = color;
     var x = OFFSET_LEFT + CELL_WIDTH * (row/2 + column);
     var y = OFFSET_TOP + CELL_HEIGHT * row;
     ctx.fillStyle = stoneColor[color];
