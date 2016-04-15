@@ -31,6 +31,18 @@ sub game-from-database($dbh) {
     return Games::Nex.from-moves(@moves);
 }
 
+sub moves-array-from-database($dbh) {
+    my $sth = $dbh.prepare(q:to '.');
+        SELECT move_data
+        FROM Move
+        WHERE game_id = 1
+        ORDER BY seq_no ASC
+        .
+    $sth.execute();
+    my @moves = $sth.allrows();
+    return "var moves = " ~ "[\n" ~ @moves.map({ "$_,\n".indent(4) }).join ~ "];";
+}
+
 sub persist-move($dbh, Int $moves-played, Int $player, @pairs) {
     sub v($_) {
         when Pos { '[' ~ .join(', ') ~ ']' }
@@ -46,84 +58,25 @@ sub persist-move($dbh, Int $moves-played, Int $player, @pairs) {
     $sth.execute(1, $moves-played, $player, $move-data);
 }
 
+constant INIT_MARKER = 'var moves = [];  // moves injected by server';
+
 get '/' => sub {
     my $dbh = connect();
-    my $game = game-from-database($dbh);
+    my $moves-array = moves-array-from-database($dbh);
 
-    return q:c:to 'HTML';
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="utf-8" />
-            <title>Nex</title>
-        </head>
-        <body>
-            <pre><code>{$game.dump}</code></pre>
-
-            <hr>
-
-            <h2>Placement</h2>
-            <form action="/game" method="post">
-                <input type="hidden" name="type" value="placement"><br>
-                <label for="placement-player">Player: </label>
-                    <input type="text" name="player" id="placement-player"><br>
-                <label for="placement-own-stone-row">Own stone row: </label>
-                    <input type="text" name="own-stone-row" id="placement-own-stone-row"><br>
-                <label for="placement-own-stone-column">Own stone column: </label>
-                    <input type="text" name="own-stone-column" id="placement-own-stone-column"><br>
-                <label for="placement-neutral-stone-row">Neutral stone row: </label>
-                    <input type="text" name="neutral-stone-row" id="placement-neutral-stone-row"><br>
-                <label for="placement-neutral-stone-column">Neutral stone column: </label>
-                    <input type="text" name="neutral-stone-column" id="placement-neutral-stone-column"><br>
-                <input type="submit" value="Send">
-            </form>
-
-            <hr>
-
-            <h2>Conversion</h2>
-            <form action="/game" method="post">
-                <input type="hidden" name="type" value="conversion"><br>
-                <label for="conversion-player">Player: </label>
-                    <input type="text" name="player" id="conversion-player"><br>
-                <label for="conversion-neutral-stone1-row">Neutral stone 1 row: </label>
-                    <input type="text" name="neutral-stone1-row" id="conversion-neutral-stone1-row"><br>
-                <label for="conversion-neutral-stone1-column">Neutral stone 1 column: </label>
-                    <input type="text" name="neutral-stone1-column" id="conversion-neutral-stone1-column"><br>
-                <label for="conversion-neutral-stone2-row">Neutral stone 2 row: </label>
-                    <input type="text" name="neutral-stone2-row" id="conversion-neutral-stone2-row"><br>
-                <label for="conversion-neutral-stone2-column">Neutral stone 2 column: </label>
-                    <input type="text" name="neutral-stone2-column" id="conversion-neutral-stone2-column"><br>
-                <label for="conversion-own-stone-row">Own stone row: </label>
-                    <input type="text" name="own-stone-row" id="conversion-own-stone-row"><br>
-                <label for="conversion-own-stone-column">Own stone column: </label>
-                    <input type="text" name="own-stone-column" id="conversion-own-stone-column"><br>
-                <input type="submit" value="Send">
-            </form>
-
-            <hr>
-
-            <h2>Swap</h2>
-            <form action="/game" method="post">
-                <input type="hidden" name="type" value="swap"><br>
-                <input type="submit" value="Send">
-            </form>
-        </body>
-        HTML
+    return slurp("game.html").subst(INIT_MARKER, $moves-array);
 }
 
 post '/game' => sub {
     my $data = request.env<p6sgi.input>.decode;
-    my %params = $data.split('&').map({
-        my @components = .split('=');
-        @components[0] => @components[1];
-    });
+    my %params = from-json($data);
 
     given %params<type> {
         when "placement" {
             # XXX: input validation
             my $player = %params<player> eq "1" ?? Player1 !! Player2;
-            my Pos $own = [+%params<own-stone-row>, +%params<own-stone-column>];
-            my Pos $neutral = [+%params<neutral-stone-row>, +%params<neutral-stone-column>];
+            my Pos $own = [+%params<own>[0], +%params<own>[1]];
+            my Pos $neutral = [+%params<neutral>[0], +%params<neutral>[1]];
 
             my $dbh = connect();
             my $game = game-from-database($dbh);
@@ -138,9 +91,9 @@ post '/game' => sub {
         when "conversion" {
             # XXX: input validation
             my $player = %params<player> eq "1" ?? Player1 !! Player2;
-            my Pos $neutral1 = [+%params<neutral-stone1-row>, +%params<neutral-stone1-column>];
-            my Pos $neutral2 = [+%params<neutral-stone2-row>, +%params<neutral-stone2-column>];
-            my Pos $own = [+%params<own-stone-row>, +%params<own-stone-column>];
+            my Pos $neutral1 = [+%params<neutral1>[0], +%params<neutral1>[1]];
+            my Pos $neutral2 = [+%params<neutral2>[0], +%params<neutral2>[1]];
+            my Pos $own = [+%params<own>[0], +%params<own>[1]];
 
             my $dbh = connect();
             my $game = game-from-database($dbh);
@@ -166,8 +119,14 @@ post '/game' => sub {
         }
     }
 
-    status(302);
-    header("Location", "/");
+    return "ACK";
+
+    CATCH {
+        default {
+            status(400);
+            return ~$_;
+        }
+    }
 }
 
 baile( Int(%*ENV<PORT> || 5000) );

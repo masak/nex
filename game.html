@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <title>Nex</title>
+
+    <link rel="stylesheet"
+        href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"
+        integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7"
+        crossorigin="anonymous">
+    <style>
+        body {
+            font-family: sans-serif;
+            font-size: 18pt;
+            background: #fff;
+        }
+
+        #game {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translateX(-50%) translateY(-50%);
+        }
+
+        .centered-over-top {
+            padding-left: 100px;
+        }
+
+        .centered-under-bottom {
+            padding-left: 320px;
+        }
+    </style>
+  </head>
+  <body>
+<div id="game">
+  <canvas id="canvas" width="800" height="490"></canvas>
+  <span class="centered-under-bottom">
+    <div id="btn-group-movetypes" class="btn-group" role="group" aria-label="...">
+      <button type="button" id="btn-movetype-placement" class="btn btn-default">Place</button>
+      <button type="button" id="btn-movetype-conversion" class="btn btn-default">Convert</button>
+      <button type="button" id="btn-movetype-swap" class="btn btn-default">Swap</button>
+      <button type="button" id="btn-movetype-resignation" class="btn btn-default">Resign</button>
+    </div>
+    <button type="button" id="btn-commit-move" class="btn btn-primary" disabled="disabled">Commit move</button>
+  </span>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.0.0-beta1.js"></script>
+
+<script>
+var CELL_HEIGHT = 35;
+var CELL_WIDTH = 40;
+var POINTY_HEIGHT = 9;
+var EDGE_WIDTH = 10;
+var EDGE_HEIGHT = 8;
+var EDGE_VERTICAL_EXTRA = 6;
+var OFFSET_LEFT = EDGE_WIDTH + 1;
+var OFFSET_TOP = 8;
+var STONE_RADIUS = 15;
+var BOARD_SIZE = 13;
+
+var canvas = document.getElementById("canvas");
+var ctx = canvas.getContext("2d");
+
+var STONE_NONE = undefined;
+var STONE_VERTICAL = 1;
+var STONE_HORIZONTAL = 2;
+var STONE_NEUTRAL = 3;
+
+var colorOf = {};
+colorOf[STONE_VERTICAL] = "#000";
+colorOf[STONE_HORIZONTAL] = "#fff";
+colorOf[STONE_NEUTRAL] = "#777";
+
+var PLAYER1 = STONE_VERTICAL;
+var PLAYER2 = STONE_HORIZONTAL;
+
+var currentPlayer = PLAYER1;
+
+var moves = [];  // moves injected by server
+var board = {};
+for (var i = 0; i < BOARD_SIZE; i++) {
+    board[i] = {};
+}
+
+ctx.clearRect(0, 0, canvas.width, canvas.height);
+drawLeftEdge();
+drawRightEdge();
+drawTopEdge();
+drawBottomEdge();
+redrawBoard();
+
+var State = {
+    NONE: function NONE() {
+    },
+    PLACEMENT: function PLACEMENT() {
+    },
+    PLACEMENT_OWN_PLACED: function PLACEMENT_OWN_PLACED(own) {
+        this.own = own;
+    },
+    PLACEMENT_READY_COMMIT: function PLACEMENT_READY_COMMIT(own, neutral) {
+        this.own = own;
+        this.neutral = neutral;
+    },
+    CONVERSION: function CONVERSION() {
+    },
+    CONVERSION_OWN_CHOSEN: function CONVERSION_OWN_CHOSEN(own) {
+        this.own = own;
+    },
+    CONVERSION_NEUTRAL_CHOSEN: function CONVERSION_NEUTRAL_CHOSEN(neutral) {
+        this.neutral = neutral;
+    },
+    CONVERSION_2_NEUTRAL_CHOSEN: function CONVERSION_2_NEUTRAL_CHOSEN(neutral1, neutral2) {
+        this.neutral1 = neutral1;
+        this.neutral2 = neutral2;
+    },
+    CONVERSION_NEUTRAL_OWN_CHOSEN: function CONVERSION_NEUTRAL_OWN_CHOSEN(neutral, own) {
+        this.neutral = neutral;
+        this.own = own;
+    },
+    CONVERSION_READY_COMMIT: function CONVERSION_READY_COMMIT(neutral1, neutral2, own) {
+        this.neutral1 = neutral1;
+        this.neutral2 = neutral2;
+        this.own = own;
+    },
+    SWAP_READY_COMMIT: function SWAP_READY_COMMIT() {
+    },
+    RESIGNATION: function RESIGNATION() {
+    }
+};
+
+var currentState = new State.NONE();
+
+State.NONE.prototype.handle = function handle(row, column, stoneColor) {
+    if (stoneColor == STONE_NONE) {
+        placeStone(row, column, currentPlayer);
+        drawPiecePlus(row, column, "#f00");
+        setMoveType("placement");
+        currentState = new State.PLACEMENT_OWN_PLACED([row, column]);
+    }
+    else if (stoneColor == currentPlayer) {
+        drawPieceCross(row, column, "#f00");
+        setMoveType("conversion");
+        currentState = new State.CONVERSION_OWN_CHOSEN([row, column]);
+    }
+    else if (stoneColor == STONE_NEUTRAL) {
+        drawPieceCross(row, column, "#f00");
+        setMoveType("conversion");
+        currentState = new State.CONVERSION_NEUTRAL_CHOSEN([row, column]);
+    }
+};
+
+State.PLACEMENT.prototype.handle = function handle(row, column, stoneColor) {
+    if (stoneColor == STONE_NONE) {
+        placeStone(row, column, currentPlayer);
+        drawPiecePlus(row, column, "#f00");
+        setMoveType("placement");
+        currentState = new State.PLACEMENT_OWN_PLACED([row, column]);
+    }
+};
+
+State.PLACEMENT_OWN_PLACED.prototype.handle = function handle(row, column, stoneColor) {
+    if (stoneColor == STONE_NONE) {
+        placeStone(row, column, STONE_NEUTRAL);
+        drawPiecePlus(row, column, "#f00");
+        enableCommitMove();
+        currentState = new State.PLACEMENT_READY_COMMIT(this.own, [row, column]);
+    }
+};
+
+State.PLACEMENT_READY_COMMIT.prototype.commit = function commit() {
+    unsetMoveType();
+
+    drawEmptyCell(this.own[0], this.own[1]);
+    drawEmptyCell(this.neutral[0], this.neutral[1]);
+    placeStone(this.own[0], this.own[1], currentPlayer);
+    placeStone(this.neutral[0], this.neutral[1], STONE_NEUTRAL);
+
+    var moveData = {
+        type: "placement",
+        own: this.own,
+        neutral: this.neutral,
+        player: currentPlayer   // XXX: take swap into account
+    };
+    currentState = new State.NONE();
+    currentPlayer = currentPlayer == PLAYER1 ? PLAYER2 : PLAYER1;
+
+    $.post("/game", JSON.stringify(moveData))
+        .done(function (data) {
+            moves.push(moveData);
+            redrawBoard();
+        })
+        .fail(function (err) {
+            redrawBoard();
+            alert(err.responseText);
+        });
+};
+
+State.CONVERSION.prototype.handle = function handle(row, column, stoneColor) {
+    if (stoneColor == currentPlayer) {
+        drawPieceCross(row, column, "#f00");
+        setMoveType("conversion");
+        currentState = new State.CONVERSION_OWN_CHOSEN([row, column]);
+    }
+    else if (stoneColor == STONE_NEUTRAL) {
+        drawPieceCross(row, column, "#f00");
+        setMoveType("conversion");
+        currentState = new State.CONVERSION_NEUTRAL_CHOSEN([row, column]);
+    }
+};
+
+State.CONVERSION_OWN_CHOSEN.prototype.handle = function handle(row, column, stoneColor) {
+    if (stoneColor == STONE_NEUTRAL) {
+        drawPieceCross(row, column, "#f00");
+        currentState = new State.CONVERSION_NEUTRAL_OWN_CHOSEN([row, column], this.own);
+    }
+};
+
+State.CONVERSION_NEUTRAL_CHOSEN.prototype.handle = function handle(row, column, stoneColor) {
+    if (stoneColor == currentPlayer) {
+        drawPieceCross(row, column, "#f00");
+        currentState = new State.CONVERSION_NEUTRAL_OWN_CHOSEN(this.neutral, [row, column]);
+    }
+    else if (stoneColor == STONE_NEUTRAL) {
+        drawPieceCross(row, column, "#f00");
+        currentState = new State.CONVERSION_2_NEUTRAL_CHOSEN(this.neutral, [row, column]);
+    }
+};
+
+State.CONVERSION_2_NEUTRAL_CHOSEN.prototype.handle = function handle(row, column, stoneColor) {
+    if (stoneColor == currentPlayer) {
+        drawPieceCross(row, column, "#f00");
+        enableCommitMove();
+        currentState = new State.CONVERSION_READY_COMMIT(this.neutral1, this.neutral2, [row, column]);
+    }
+};
+
+State.CONVERSION_NEUTRAL_OWN_CHOSEN.prototype.handle = function handle(row, column, stoneColor) {
+    if (stoneColor == STONE_NEUTRAL) {
+        drawPieceCross(row, column, "#f00");
+        enableCommitMove();
+        currentState = new State.CONVERSION_READY_COMMIT(this.neutral, [row, column], this.own);
+    }
+};
+
+State.CONVERSION_READY_COMMIT.prototype.commit = function commit() {
+    unsetMoveType();
+
+    drawEmptyCell(this.neutral1[0], this.neutral1[1]);
+    drawEmptyCell(this.neutral2[0], this.neutral2[1]);
+    drawEmptyCell(this.own[0], this.own[1]);
+    placeStone(this.neutral1[0], this.neutral1[1], currentPlayer);
+    placeStone(this.neutral2[0], this.neutral2[1], currentPlayer);
+    placeStone(this.own[0], this.own[1], STONE_NEUTRAL);
+
+    var moveData = {
+        type: "conversion",
+        neutral1: this.neutral1,
+        neutral2: this.neutral2,
+        own: this.own,
+        player: currentPlayer   // XXX: take swap into account
+    };
+    currentState = new State.NONE();
+    currentPlayer = currentPlayer == PLAYER1 ? PLAYER2 : PLAYER1;
+
+    $.post("/game", JSON.stringify(moveData))
+        .done(function (data) {
+            moves.push(moveData);
+            redrawBoard();
+        })
+        .fail(function (err) {
+            redrawBoard();
+            alert(err.responseText);
+        });
+};
+
+State.SWAP_READY_COMMIT.prototype.commit = function commit() {
+    unsetMoveType();
+
+    if (moves.length > 1) {
+        currentState = new State.NONE();
+        alert("Cannot swap after the second move");
+        return;
+    }
+
+    var moveData = {
+        type: "swap",
+        player: currentPlayer   // XXX: take swap into account
+    };
+    currentState = new State.NONE();
+    currentPlayer = currentPlayer == PLAYER1 ? PLAYER2 : PLAYER1;
+
+    $.post("/game", JSON.stringify(moveData))
+        .done(function (data) {
+            moves.push(moveData);
+            redrawBoard();
+        })
+        .fail(function (err) {
+            redrawBoard();
+            alert(err.responseText);
+        });
+};
+
+$(canvas).on("click", function onClickCanvas(event) {
+    if (!currentState.handle)
+        return;
+    var row = Math.floor((event.offsetY - POINTY_HEIGHT - OFFSET_TOP) / CELL_HEIGHT);
+    var column = Math.floor((event.offsetX - CELL_WIDTH/2 * row - OFFSET_LEFT) / CELL_WIDTH);
+    if (row < 0 || row >= BOARD_SIZE)
+        return;
+    if (column < 0 || column >= BOARD_SIZE)
+        return;
+    var stoneColor = board[row][column];
+    currentState.handle(row, column, stoneColor);
+});
+
+$("#btn-movetype-placement").on("click", function onClickPlacement(event) {
+    if (!(currentState instanceof State.NONE))
+        return;
+    setMoveType("placement");
+    currentState = new State.PLACEMENT();
+});
+
+$("#btn-movetype-conversion").on("click", function onClickConversion(event) {
+    if (!(currentState instanceof State.NONE))
+        return;
+    setMoveType("conversion");
+    currentState = new State.CONVERSION();
+});
+
+$("#btn-movetype-swap").on("click", function onClickSwap(event) {
+    if (!(currentState instanceof State.NONE))
+        return;
+    setMoveType("swap");
+    enableCommitMove();
+    currentState = new State.SWAP_READY_COMMIT();
+});
+
+$("#btn-movetype-resignation").on("click", function onClickResignation(event) {
+    if (!(currentState instanceof State.NONE))
+        return;
+    setMoveType("resignation");
+    currentState = new State.RESIGNATION();
+});
+
+$("#btn-commit-move").on("click", function onClickCommit(event) {
+    if (!currentState.commit)
+        return;
+    currentState.commit();
+});
+
+// init code ends. only functions below this point.
+
+function drawLeftEdge() {
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.lineTo(1, OFFSET_TOP + POINTY_HEIGHT - EDGE_VERTICAL_EXTRA);
+    for (var i = 0; i < BOARD_SIZE; i++) {
+        ctx.lineTo(1 + EDGE_WIDTH + i * CELL_WIDTH / 2, OFFSET_TOP + i * CELL_HEIGHT + POINTY_HEIGHT);
+        ctx.lineTo(1 + EDGE_WIDTH + i * CELL_WIDTH / 2, OFFSET_TOP + (i + 1) * CELL_HEIGHT);
+    }
+    for (var i = BOARD_SIZE - 1; i >= 0; i--) {
+        ctx.lineTo(1 + i * CELL_WIDTH / 2, OFFSET_TOP + (i + 1) * CELL_HEIGHT + EDGE_VERTICAL_EXTRA);
+        ctx.lineTo(1 + i * CELL_WIDTH / 2, OFFSET_TOP + i * CELL_HEIGHT + POINTY_HEIGHT + EDGE_VERTICAL_EXTRA);
+    }
+    ctx.lineTo(1, OFFSET_TOP + POINTY_HEIGHT - EDGE_VERTICAL_EXTRA);
+    ctx.fill();
+    ctx.stroke();
+    ctx.closePath();
+}
+
+function drawRightEdge() {
+    var x = OFFSET_LEFT + BOARD_SIZE * CELL_WIDTH;
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.lineTo(x, OFFSET_TOP + POINTY_HEIGHT);
+    for (var i = 0; i < BOARD_SIZE; i++) {
+        ctx.lineTo(x + EDGE_WIDTH + i * CELL_WIDTH / 2, OFFSET_TOP + i * CELL_HEIGHT + POINTY_HEIGHT - EDGE_VERTICAL_EXTRA);
+        if (i == BOARD_SIZE - 1)
+            break;
+        ctx.lineTo(x + EDGE_WIDTH + i * CELL_WIDTH / 2, OFFSET_TOP + (i + 1) * CELL_HEIGHT - EDGE_VERTICAL_EXTRA);
+    }
+    ctx.lineTo(x + EDGE_WIDTH + (BOARD_SIZE - 1) * CELL_WIDTH / 2, OFFSET_TOP + BOARD_SIZE * CELL_HEIGHT + EDGE_HEIGHT);
+    for (var i = BOARD_SIZE - 1; i >= 0; i--) {
+        ctx.lineTo(x + i * CELL_WIDTH / 2, OFFSET_TOP + (i + 1) * CELL_HEIGHT);
+        ctx.lineTo(x + i * CELL_WIDTH / 2, OFFSET_TOP + i * CELL_HEIGHT + POINTY_HEIGHT);
+    }
+    ctx.lineTo(x, OFFSET_TOP + POINTY_HEIGHT);
+    ctx.fill();
+    ctx.stroke();
+    ctx.closePath();
+}
+
+function drawTopEdge() {
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.lineTo(1, OFFSET_TOP + POINTY_HEIGHT - EDGE_VERTICAL_EXTRA);
+    for (var i = 0; i < BOARD_SIZE; i++) {
+        ctx.lineTo(OFFSET_LEFT + (i + 1/2) * CELL_WIDTH, OFFSET_TOP - EDGE_HEIGHT);
+        if (i == BOARD_SIZE - 1)
+            break;
+        ctx.lineTo(OFFSET_LEFT + (i + 1) * CELL_WIDTH, OFFSET_TOP + POINTY_HEIGHT - EDGE_HEIGHT);
+    }
+    ctx.lineTo(OFFSET_LEFT + BOARD_SIZE * CELL_WIDTH + EDGE_WIDTH, OFFSET_TOP + POINTY_HEIGHT - EDGE_VERTICAL_EXTRA);
+    for (var i = BOARD_SIZE - 1; i >= 0; i--) {
+        ctx.lineTo(OFFSET_LEFT + (i + 1) * CELL_WIDTH, OFFSET_TOP + POINTY_HEIGHT);
+        ctx.lineTo(OFFSET_LEFT + (i + 1/2) * CELL_WIDTH, OFFSET_TOP);
+    }
+    ctx.lineTo(1 + EDGE_WIDTH, OFFSET_TOP + POINTY_HEIGHT);
+    ctx.lineTo(1, OFFSET_TOP + POINTY_HEIGHT - EDGE_VERTICAL_EXTRA);
+    ctx.fill();
+    ctx.stroke();
+    ctx.closePath();
+}
+
+function drawBottomEdge() {
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    var x = OFFSET_LEFT + (BOARD_SIZE - 1) * CELL_WIDTH / 2;
+    var y = OFFSET_TOP + BOARD_SIZE * CELL_HEIGHT + POINTY_HEIGHT;
+    ctx.lineTo(x - EDGE_WIDTH, y - EDGE_HEIGHT + EDGE_VERTICAL_EXTRA);
+    for (var i = 0; i < BOARD_SIZE; i++) {
+        ctx.lineTo(x + (i + 1/2) * CELL_WIDTH, y + EDGE_HEIGHT);
+        if (i == BOARD_SIZE - 1)
+            break;
+        ctx.lineTo(x + (i + 1) * CELL_WIDTH, y - POINTY_HEIGHT + EDGE_HEIGHT);
+    }
+    ctx.lineTo(x + BOARD_SIZE * CELL_WIDTH + EDGE_WIDTH, y - POINTY_HEIGHT + EDGE_VERTICAL_EXTRA);
+    for (var i = BOARD_SIZE - 1; i >= 0; i--) {
+        ctx.lineTo(x + (i + 1) * CELL_WIDTH, y - POINTY_HEIGHT);
+        ctx.lineTo(x + (i + 1/2) * CELL_WIDTH, y);
+    }
+    ctx.lineTo(x, y - POINTY_HEIGHT);
+    ctx.lineTo(x - EDGE_WIDTH, y - EDGE_HEIGHT + EDGE_VERTICAL_EXTRA);
+    ctx.fill();
+    ctx.stroke();
+    ctx.closePath();
+}
+
+function drawCell(i, j, background) {
+    var x = OFFSET_LEFT + CELL_WIDTH * (i/2 + j);
+    var y = OFFSET_TOP + CELL_HEIGHT * i;
+    ctx.fillStyle = background;
+    ctx.beginPath();
+    ctx.moveTo(x, y + POINTY_HEIGHT);
+    ctx.lineTo(x + CELL_WIDTH/2, y);
+    ctx.lineTo(x + CELL_WIDTH, y + POINTY_HEIGHT);
+    ctx.lineTo(x + CELL_WIDTH, y + CELL_HEIGHT);
+    ctx.lineTo(x + CELL_WIDTH/2, y + CELL_HEIGHT + POINTY_HEIGHT);
+    ctx.lineTo(x, y + CELL_HEIGHT);
+    ctx.lineTo(x, y + POINTY_HEIGHT);
+    ctx.fill();
+    ctx.stroke();
+    ctx.closePath();
+}
+
+function drawEmptyCell(i, j) {
+    drawCell(i, j, "#ffa");
+}
+
+function highlightLatest(i, j) {
+    drawCell(i, j, "#aaf");
+}
+
+function placeStone(row, column, stoneColor) {
+    board[row][column] = stoneColor;
+    var x = OFFSET_LEFT + CELL_WIDTH * (row/2 + column);
+    var y = OFFSET_TOP + CELL_HEIGHT * row;
+    ctx.fillStyle = colorOf[stoneColor];
+    ctx.beginPath();
+    ctx.arc(
+        x + CELL_WIDTH/2, y + (CELL_HEIGHT + POINTY_HEIGHT)/2,
+        STONE_RADIUS,
+        0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.closePath();
+}
+
+function drawPiecePlus(row, column, color) {
+    var x = OFFSET_LEFT + CELL_WIDTH * (row/2 + column);
+    var y = OFFSET_TOP + CELL_HEIGHT * row;
+    color = color == undefined ? "#f00" : color;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(
+        x + CELL_WIDTH/2, y + (CELL_HEIGHT + POINTY_HEIGHT)/2,
+        STONE_RADIUS / 2,
+        0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.closePath();
+}
+
+function drawPieceCross(row, column, color) {
+    var x = OFFSET_LEFT + CELL_WIDTH * (row/2 + column);
+    var y = OFFSET_TOP + CELL_HEIGHT * row;
+    color = color == undefined ? "#f00" : color;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(
+        x + CELL_WIDTH/2, y + (CELL_HEIGHT + POINTY_HEIGHT)/2,
+        STONE_RADIUS / 2,
+        0, Math.PI);
+    ctx.fill();
+    ctx.stroke();
+    ctx.closePath();
+}
+
+function redrawBoard() {
+    for (var i = 0; i < BOARD_SIZE; i++) {
+        for (var j = 0; j < BOARD_SIZE; j++) {
+            drawEmptyCell(i, j);
+        }
+    }
+    PLAYER1 = STONE_VERTICAL;
+    PLAYER2 = STONE_HORIZONTAL;
+    currentPlayer = PLAYER1;
+    for (var i in moves) {
+        var move = moves[i];
+        var isLatestMove = i == moves.length - 1;
+        switch (move.type) {
+            case "placement":
+                var own = move.own,
+                    neutral = move.neutral;
+                if (isLatestMove) {
+                    highlightLatest(own[0], own[1]);
+                    highlightLatest(neutral[0], neutral[1]);
+                }
+                placeStone(own[0], own[1], currentPlayer);
+                placeStone(neutral[0], neutral[1], STONE_NEUTRAL);
+                currentPlayer = currentPlayer == PLAYER1 ? PLAYER2 : PLAYER1;
+                break;
+
+            case "conversion":
+                var neutral1 = move.neutral1,
+                    neutral2 = move.neutral2,
+                    own = move.own;
+                if (isLatestMove) {
+                    highlightLatest(neutral1[0], neutral1[1]);
+                    highlightLatest(neutral2[0], neutral2[1]);
+                    highlightLatest(own[0], own[1]);
+                }
+                placeStone(neutral1[0], neutral1[1], currentPlayer);
+                placeStone(neutral2[0], neutral2[1], currentPlayer);
+                placeStone(own[0], own[1], STONE_NEUTRAL);
+                currentPlayer = currentPlayer == PLAYER1 ? PLAYER2 : PLAYER1;
+                break;
+
+            case "swap":
+                PLAYER1 = STONE_HORIZONTAL;
+                PLAYER2 = STONE_VERTICAL;
+                currentPlayer = PLAYER1;
+                break;
+        }
+    }
+}
+
+function unsetMoveType() {
+    $("#btn-group-movetypes > button").removeClass("active");
+}
+
+function setMoveType(type) {
+    unsetMoveType();
+    $("#btn-movetype-" + type).addClass("active");
+}
+
+function enableCommitMove() {
+    $("#btn-commit-move").prop("disabled", false);
+}
+
+function disableCommitMove() {
+    $("#btn-commit-move").prop("disabled", true);
+}
+</script>
+  </body>
+</html>
