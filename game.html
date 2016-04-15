@@ -70,6 +70,11 @@ var STONE_NEUTRAL = 3;
 var PLAYER1 = 1;
 var PLAYER2 = 2;
 
+var stoneColor = {};
+stoneColor[STONE_VERTICAL] = "#000";
+stoneColor[STONE_HORIZONTAL] = "#fff";
+stoneColor[STONE_NEUTRAL] = "#777";
+
 var swapped = false;
 var currentPlayer = PLAYER1;
 
@@ -179,7 +184,7 @@ State.PLACEMENT_READY_COMMIT.prototype.commit = function commit() {
         player: currentPlayer
     };
     currentState = new State.NONE();
-    currentPlayer = currentPlayer == PLAYER1 ? PLAYER2 : PLAYER1;
+    currentPlayer = opponent(currentPlayer);
 
     $.post("/game", JSON.stringify(moveData))
         .done(function (data) {
@@ -257,7 +262,7 @@ State.CONVERSION_READY_COMMIT.prototype.commit = function commit() {
         player: currentPlayer
     };
     currentState = new State.NONE();
-    currentPlayer = currentPlayer == PLAYER1 ? PLAYER2 : PLAYER1;
+    currentPlayer = opponent(currentPlayer);
 
     $.post("/game", JSON.stringify(moveData))
         .done(function (data) {
@@ -284,7 +289,7 @@ State.SWAP_READY_COMMIT.prototype.commit = function commit() {
         player: currentPlayer
     };
     currentState = new State.NONE();
-    currentPlayer = currentPlayer == PLAYER1 ? PLAYER2 : PLAYER1;
+    currentPlayer = opponent(currentPlayer);
 
     $.post("/game", JSON.stringify(moveData))
         .done(function (data) {
@@ -458,16 +463,11 @@ function highlightLatest(i, j) {
     drawCell(i, j, "#aaf");
 }
 
-function placeStone(row, column, stoneColor) {
-    var colorOfStone = {};
-    colorOfStone[STONE_VERTICAL] = "#000";
-    colorOfStone[STONE_HORIZONTAL] = "#fff";
-    colorOfStone[STONE_NEUTRAL] = "#777";
-
+function placeStone(row, column, color) {
     board[row][column] = stoneColor;
     var x = OFFSET_LEFT + CELL_WIDTH * (row/2 + column);
     var y = OFFSET_TOP + CELL_HEIGHT * row;
-    ctx.fillStyle = colorOfStone[stoneColor];
+    ctx.fillStyle = stoneColor[color];
     ctx.beginPath();
     ctx.arc(
         x + CELL_WIDTH/2, y + (CELL_HEIGHT + POINTY_HEIGHT)/2,
@@ -481,7 +481,6 @@ function placeStone(row, column, stoneColor) {
 function drawPiecePlus(row, column, color) {
     var x = OFFSET_LEFT + CELL_WIDTH * (row/2 + column);
     var y = OFFSET_TOP + CELL_HEIGHT * row;
-    color = color == undefined ? "#f00" : color;
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.arc(
@@ -489,14 +488,12 @@ function drawPiecePlus(row, column, color) {
         STONE_RADIUS / 2,
         0, Math.PI * 2);
     ctx.fill();
-    ctx.stroke();
     ctx.closePath();
 }
 
 function drawPieceCross(row, column, color) {
     var x = OFFSET_LEFT + CELL_WIDTH * (row/2 + column);
     var y = OFFSET_TOP + CELL_HEIGHT * row;
-    color = color == undefined ? "#f00" : color;
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.arc(
@@ -504,7 +501,6 @@ function drawPieceCross(row, column, color) {
         STONE_RADIUS / 2,
         0, Math.PI);
     ctx.fill();
-    ctx.stroke();
     ctx.closePath();
 }
 
@@ -529,7 +525,7 @@ function redrawBoard() {
                 }
                 placeStone(own[0], own[1], colorOf(currentPlayer));
                 placeStone(neutral[0], neutral[1], STONE_NEUTRAL);
-                currentPlayer = currentPlayer == PLAYER1 ? PLAYER2 : PLAYER1;
+                currentPlayer = opponent(currentPlayer);
                 break;
 
             case "conversion":
@@ -544,7 +540,7 @@ function redrawBoard() {
                 placeStone(neutral1[0], neutral1[1], colorOf(currentPlayer));
                 placeStone(neutral2[0], neutral2[1], colorOf(currentPlayer));
                 placeStone(own[0], own[1], STONE_NEUTRAL);
-                currentPlayer = currentPlayer == PLAYER1 ? PLAYER2 : PLAYER1;
+                currentPlayer = opponent(currentPlayer);
                 break;
 
             case "swap":
@@ -570,6 +566,10 @@ function enableCommitMove() {
 
 function disableCommitMove() {
     $("#btn-commit-move").prop("disabled", true);
+}
+
+function opponent(player) {
+    return player == PLAYER1 ? PLAYER2 : PLAYER1;
 }
 
 function colorOf(player) {
