@@ -63,7 +63,7 @@ constant INIT_MARKER = 'var moves = [];  // moves injected by server';
 get '/' => sub {
     my $dbh = connect();
     my $moves-array = moves-array-from-database($dbh);
-    $dbh.close();
+    $dbh.disconnect();
 
     return slurp("game.html").subst(INIT_MARKER, $moves-array);
 }
@@ -119,13 +119,13 @@ post '/game' => sub {
             die "Unknown move type '%params<type>'";
         }
     }
-    $dbh.close();
+    $dbh.disconnect();
 
     return "ACK";
 
     CATCH {
         default {
-            $dbh.close();
+            $dbh.disconnect();
             status(400);
             return ~$_;
         }
