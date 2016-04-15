@@ -127,7 +127,6 @@ post '/game' => sub {
 
     CATCH {
         default {
-            $dbh.disconnect();
             status(400);
             return ~$_;
         }
