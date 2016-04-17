@@ -135,17 +135,17 @@ var currentState = new State.NONE();
 State.NONE.prototype.handle = function handle(row, column, stoneColor) {
     if (stoneColor == STONE_NONE) {
         placeStone(row, column, colorOf(currentPlayer));
-        drawPiecePlus(row, column, "#f00");
+        drawPlacementMarker(row, column);
         setMoveType("placement");
         currentState = new State.PLACEMENT_OWN_PLACED([row, column]);
     }
     else if (stoneColor == colorOf(currentPlayer)) {
-        drawPieceCross(row, column, "#f00");
+        drawConversionMarker(row, column);
         setMoveType("conversion");
         currentState = new State.CONVERSION_OWN_CHOSEN([row, column]);
     }
     else if (stoneColor == STONE_NEUTRAL) {
-        drawPieceCross(row, column, "#f00");
+        drawConversionMarker(row, column);
         setMoveType("conversion");
         currentState = new State.CONVERSION_NEUTRAL_CHOSEN([row, column]);
     }
@@ -154,7 +154,7 @@ State.NONE.prototype.handle = function handle(row, column, stoneColor) {
 State.PLACEMENT.prototype.handle = function handle(row, column, stoneColor) {
     if (stoneColor == STONE_NONE) {
         placeStone(row, column, colorOf(currentPlayer));
-        drawPiecePlus(row, column, "#f00");
+        drawPlacementMarker(row, column);
         setMoveType("placement");
         currentState = new State.PLACEMENT_OWN_PLACED([row, column]);
     }
@@ -163,7 +163,7 @@ State.PLACEMENT.prototype.handle = function handle(row, column, stoneColor) {
 State.PLACEMENT_OWN_PLACED.prototype.handle = function handle(row, column, stoneColor) {
     if (stoneColor == STONE_NONE) {
         placeStone(row, column, STONE_NEUTRAL);
-        drawPiecePlus(row, column, "#f00");
+        drawPlacementMarker(row, column);
         enableCommitMove();
         currentState = new State.PLACEMENT_READY_COMMIT(this.own, [row, column]);
     }
@@ -199,12 +199,12 @@ State.PLACEMENT_READY_COMMIT.prototype.commit = function commit() {
 
 State.CONVERSION.prototype.handle = function handle(row, column, stoneColor) {
     if (stoneColor == colorOf(currentPlayer)) {
-        drawPieceCross(row, column, "#f00");
+        drawConversionMarker(row, column);
         setMoveType("conversion");
         currentState = new State.CONVERSION_OWN_CHOSEN([row, column]);
     }
     else if (stoneColor == STONE_NEUTRAL) {
-        drawPieceCross(row, column, "#f00");
+        drawConversionMarker(row, column);
         setMoveType("conversion");
         currentState = new State.CONVERSION_NEUTRAL_CHOSEN([row, column]);
     }
@@ -212,25 +212,25 @@ State.CONVERSION.prototype.handle = function handle(row, column, stoneColor) {
 
 State.CONVERSION_OWN_CHOSEN.prototype.handle = function handle(row, column, stoneColor) {
     if (stoneColor == STONE_NEUTRAL) {
-        drawPieceCross(row, column, "#f00");
+        drawConversionMarker(row, column);
         currentState = new State.CONVERSION_NEUTRAL_OWN_CHOSEN([row, column], this.own);
     }
 };
 
 State.CONVERSION_NEUTRAL_CHOSEN.prototype.handle = function handle(row, column, stoneColor) {
     if (stoneColor == colorOf(currentPlayer)) {
-        drawPieceCross(row, column, "#f00");
+        drawConversionMarker(row, column);
         currentState = new State.CONVERSION_NEUTRAL_OWN_CHOSEN(this.neutral, [row, column]);
     }
     else if (stoneColor == STONE_NEUTRAL) {
-        drawPieceCross(row, column, "#f00");
+        drawConversionMarker(row, column);
         currentState = new State.CONVERSION_2_NEUTRAL_CHOSEN(this.neutral, [row, column]);
     }
 };
 
 State.CONVERSION_2_NEUTRAL_CHOSEN.prototype.handle = function handle(row, column, stoneColor) {
     if (stoneColor == colorOf(currentPlayer)) {
-        drawPieceCross(row, column, "#f00");
+        drawConversionMarker(row, column);
         enableCommitMove();
         currentState = new State.CONVERSION_READY_COMMIT(this.neutral1, this.neutral2, [row, column]);
     }
@@ -238,7 +238,7 @@ State.CONVERSION_2_NEUTRAL_CHOSEN.prototype.handle = function handle(row, column
 
 State.CONVERSION_NEUTRAL_OWN_CHOSEN.prototype.handle = function handle(row, column, stoneColor) {
     if (stoneColor == STONE_NEUTRAL) {
-        drawPieceCross(row, column, "#f00");
+        drawConversionMarker(row, column);
         enableCommitMove();
         currentState = new State.CONVERSION_READY_COMMIT(this.neutral, [row, column], this.own);
     }
@@ -478,10 +478,10 @@ function placeStone(row, column, color) {
     ctx.closePath();
 }
 
-function drawPiecePlus(row, column, color) {
+function drawPlacementMarker(row, column) {
     var x = OFFSET_LEFT + CELL_WIDTH * (row/2 + column);
     var y = OFFSET_TOP + CELL_HEIGHT * row;
-    ctx.fillStyle = color;
+    ctx.fillStyle = '#4f4';
     ctx.beginPath();
     ctx.arc(
         x + CELL_WIDTH/2, y + (CELL_HEIGHT + POINTY_HEIGHT)/2,
@@ -491,10 +491,10 @@ function drawPiecePlus(row, column, color) {
     ctx.closePath();
 }
 
-function drawPieceCross(row, column, color) {
+function drawConversionMarker(row, column) {
     var x = OFFSET_LEFT + CELL_WIDTH * (row/2 + column);
     var y = OFFSET_TOP + CELL_HEIGHT * row;
-    ctx.fillStyle = color;
+    ctx.fillStyle = '#4af';
     ctx.beginPath();
     ctx.arc(
         x + CELL_WIDTH/2, y + (CELL_HEIGHT + POINTY_HEIGHT)/2,
