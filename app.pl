@@ -63,7 +63,7 @@ constant INIT_MARKER = 'var moves = [];  // moves injected by server';
 get '/' => sub {
     my $dbh = connect();
     my $moves-array = moves-array-from-database($dbh);
-    $dbh.disconnect();
+    $dbh.dispose();
 
     return slurp("game.html").subst(INIT_MARKER, $moves-array);
 }
@@ -88,7 +88,7 @@ post '/game' => sub {
                 $game.moves-played,
                 +%params<player>,
                 [:type<placement>, :$own, :$neutral]);
-            $dbh.disconnect();
+            $dbh.dispose();
         }
         when "conversion" {
             # XXX: input validation
@@ -106,7 +106,7 @@ post '/game' => sub {
                 $game.moves-played,
                 +%params<player>,
                 [:type<conversion>, :$neutral1, :$neutral2, :$own]);
-            $dbh.disconnect();
+            $dbh.dispose();
         }
         when "swap" {
             # XXX: input validation
@@ -116,7 +116,7 @@ post '/game' => sub {
             $game.swap();
 
             persist-move($dbh, $game.moves-played, 2, [:type<swap>]);
-            $dbh.disconnect();
+            $dbh.dispose();
         }
         default {
             die "Unknown move type '%params<type>'";
