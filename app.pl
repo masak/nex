@@ -31,7 +31,8 @@ sub game-from-database($dbh) {
     return Games::Nex.from-moves(@moves);
 }
 
-sub moves-array-from-database($dbh) {
+sub moves-array-from-database() {
+    my $dbh will leave { .dispose() } = connect();
     my $sth = $dbh.prepare(q:to '.');
         SELECT move_data
         FROM Move
@@ -61,11 +62,7 @@ sub persist-move($dbh, Int $moves-played, Int $player, @pairs) {
 constant INIT_MARKER = 'var moves = [];  // moves injected by server';
 
 get '/' => sub {
-    my $dbh = connect();
-    my $moves-array = moves-array-from-database($dbh);
-    $dbh.dispose();
-
-    return slurp("game.html").subst(INIT_MARKER, $moves-array);
+    return slurp("game.html").subst(INIT_MARKER, moves-array-from-database);
 }
 
 post '/game' => sub {
@@ -79,7 +76,7 @@ post '/game' => sub {
             my Pos $own = [+%params<own>[0], +%params<own>[1]];
             my Pos $neutral = [+%params<neutral>[0], +%params<neutral>[1]];
 
-            my $dbh = connect();
+            my $dbh will leave { .dispose() } = connect();
             my $game = game-from-database($dbh);
             $game.place(:$player, :$own, :$neutral);
 
@@ -88,7 +85,6 @@ post '/game' => sub {
                 $game.moves-played,
                 +%params<player>,
                 [:type<placement>, :$own, :$neutral]);
-            $dbh.dispose();
         }
         when "conversion" {
             # XXX: input validation
@@ -97,7 +93,7 @@ post '/game' => sub {
             my Pos $neutral2 = [+%params<neutral2>[0], +%params<neutral2>[1]];
             my Pos $own = [+%params<own>[0], +%params<own>[1]];
 
-            my $dbh = connect();
+            my $dbh will leave { .dispose() } = connect();
             my $game = game-from-database($dbh);
             $game.convert(:$player, :$neutral1, :$neutral2, :$own);
 
@@ -106,17 +102,15 @@ post '/game' => sub {
                 $game.moves-played,
                 +%params<player>,
                 [:type<conversion>, :$neutral1, :$neutral2, :$own]);
-            $dbh.dispose();
         }
         when "swap" {
             # XXX: input validation
 
-            my $dbh = connect();
+            my $dbh will leave { .dispose() } = connect();
             my $game = game-from-database($dbh);
             $game.swap();
 
             persist-move($dbh, $game.moves-played, 2, [:type<swap>]);
-            $dbh.dispose();
         }
         default {
             die "Unknown move type '%params<type>'";
