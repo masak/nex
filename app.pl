@@ -65,6 +65,10 @@ get '/' => sub {
     return slurp("game.html").subst(INIT_MARKER, moves-array-from-database);
 }
 
+get '/replay' => sub {
+    return slurp("replay.html").subst(INIT_MARKER, moves-array-from-database);
+}
+
 post '/game' => sub {
     my $data = request.env<p6sgi.input>.decode;
     my %params = from-json($data);

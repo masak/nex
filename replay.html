@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <title>Nex</title>
+
+    <link rel="stylesheet"
+        href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"
+        integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7"
+        crossorigin="anonymous">
+    <style>
+        body {
+            font-family: sans-serif;
+            font-size: 18pt;
+            background: #fff;
+        }
+
+        #game {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translateX(-50%) translateY(-50%);
+        }
+
+        .centered-over-top {
+            padding-left: 100px;
+        }
+
+        .centered-under-bottom {
+            padding-left: 440px;
+        }
+    </style>
+  </head>
+  <body>
+<div id="game">
+  <canvas id="canvas" width="800" height="490"></canvas>
+  <span class="centered-under-bottom">
+    <button type="button" id="btn-navigate-previous" class="btn btn-primary"><span class="glyphicon glyphicon-arrow-left" aria-hidden="true"></span></button>
+    <button type="button" id="btn-navigate-next" class="btn btn-primary"><span class="glyphicon glyphicon-arrow-right" aria-hidden="true"></span></button>
+    <a href="" id="download-link" download="001.png">Download</a>
+  </span>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.0.0-beta1.js"></script>
+
+<script>
+var CELL_HEIGHT = 35;
+var CELL_WIDTH = 40;
+var POINTY_HEIGHT = 9;
+var EDGE_WIDTH = 10;
+var EDGE_HEIGHT = 8;
+var EDGE_VERTICAL_EXTRA = 6;
+var OFFSET_LEFT = EDGE_WIDTH + 1;
+var OFFSET_TOP = 8;
+var STONE_RADIUS = 15;
+var BOARD_SIZE = 13;
+
+var canvas = document.getElementById("canvas");
+var ctx = canvas.getContext("2d");
+
+var STONE_NONE = undefined;
+var STONE_VERTICAL = 1;
+var STONE_HORIZONTAL = 2;
+var STONE_NEUTRAL = 3;
+
+var PLAYER1 = 1;
+var PLAYER2 = 2;
+
+var stoneColor = {};
+stoneColor[STONE_VERTICAL] = "#000";
+stoneColor[STONE_HORIZONTAL] = "#fff";
+stoneColor[STONE_NEUTRAL] = "#777";
+
+var swapped = false;
+var currentPlayer = PLAYER1;
+var currentMove = 1;
+
+var moves = [];  // moves injected by server
+var board = {};
+for (var i = 0; i < BOARD_SIZE; i++) {
+    board[i] = {};
+}
+
+ctx.clearRect(0, 0, canvas.width, canvas.height);
+drawLeftEdge();
+drawRightEdge();
+drawTopEdge();
+drawBottomEdge();
+redrawBoard();
+updateDownloadLink();
+
+function updateDownloadLink() {
+    var url = $("#canvas").get(0).toDataURL("image/png;base64;");
+    var anchor = $("#download-link");
+    anchor.attr("href", url);
+    var filename = currentMove + ".png";
+    if (currentMove < 10) // this is in lieu of a real sprintf
+        filename = "0" + filename;
+    if (currentMove < 100)
+        filename = "0" + filename;
+    anchor.attr("download", filename);
+}
+
+$("#btn-navigate-previous").on("click", function onClickNavigatePrevious(event) {
+    if (currentMove <= 1)
+        return;
+    currentMove--;
+    redrawBoard();
+    updateDownloadLink();
+});
+
+$("#btn-navigate-next").on("click", function onClickNavigateNext(event) {
+    if (currentMove >= moves.length)
+        return;
+    currentMove++;
+    redrawBoard();
+    updateDownloadLink();
+});
+
+// init code ends. only functions below this point.
+
+function drawLeftEdge() {
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.lineTo(1, OFFSET_TOP + POINTY_HEIGHT - EDGE_VERTICAL_EXTRA);
+    for (var i = 0; i < BOARD_SIZE; i++) {
+        ctx.lineTo(1 + EDGE_WIDTH + i * CELL_WIDTH / 2, OFFSET_TOP + i * CELL_HEIGHT + POINTY_HEIGHT);
+        ctx.lineTo(1 + EDGE_WIDTH + i * CELL_WIDTH / 2, OFFSET_TOP + (i + 1) * CELL_HEIGHT);
+    }
+    for (var i = BOARD_SIZE - 1; i >= 0; i--) {
+        ctx.lineTo(1 + i * CELL_WIDTH / 2, OFFSET_TOP + (i + 1) * CELL_HEIGHT + EDGE_VERTICAL_EXTRA);
+        ctx.lineTo(1 + i * CELL_WIDTH / 2, OFFSET_TOP + i * CELL_HEIGHT + POINTY_HEIGHT + EDGE_VERTICAL_EXTRA);
+    }
+    ctx.lineTo(1, OFFSET_TOP + POINTY_HEIGHT - EDGE_VERTICAL_EXTRA);
+    ctx.fill();
+    ctx.stroke();
+    ctx.closePath();
+}
+
+function drawRightEdge() {
+    var x = OFFSET_LEFT + BOARD_SIZE * CELL_WIDTH;
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.lineTo(x, OFFSET_TOP + POINTY_HEIGHT);
+    for (var i = 0; i < BOARD_SIZE; i++) {
+        ctx.lineTo(x + EDGE_WIDTH + i * CELL_WIDTH / 2, OFFSET_TOP + i * CELL_HEIGHT + POINTY_HEIGHT - EDGE_VERTICAL_EXTRA);
+        if (i == BOARD_SIZE - 1)
+            break;
+        ctx.lineTo(x + EDGE_WIDTH + i * CELL_WIDTH / 2, OFFSET_TOP + (i + 1) * CELL_HEIGHT - EDGE_VERTICAL_EXTRA);
+    }
+    ctx.lineTo(x + EDGE_WIDTH + (BOARD_SIZE - 1) * CELL_WIDTH / 2, OFFSET_TOP + BOARD_SIZE * CELL_HEIGHT + EDGE_HEIGHT);
+    for (var i = BOARD_SIZE - 1; i >= 0; i--) {
+        ctx.lineTo(x + i * CELL_WIDTH / 2, OFFSET_TOP + (i + 1) * CELL_HEIGHT);
+        ctx.lineTo(x + i * CELL_WIDTH / 2, OFFSET_TOP + i * CELL_HEIGHT + POINTY_HEIGHT);
+    }
+    ctx.lineTo(x, OFFSET_TOP + POINTY_HEIGHT);
+    ctx.fill();
+    ctx.stroke();
+    ctx.closePath();
+}
+
+function drawTopEdge() {
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.lineTo(1, OFFSET_TOP + POINTY_HEIGHT - EDGE_VERTICAL_EXTRA);
+    for (var i = 0; i < BOARD_SIZE; i++) {
+        ctx.lineTo(OFFSET_LEFT + (i + 1/2) * CELL_WIDTH, OFFSET_TOP - EDGE_HEIGHT);
+        if (i == BOARD_SIZE - 1)
+            break;
+        ctx.lineTo(OFFSET_LEFT + (i + 1) * CELL_WIDTH, OFFSET_TOP + POINTY_HEIGHT - EDGE_HEIGHT);
+    }
+    ctx.lineTo(OFFSET_LEFT + BOARD_SIZE * CELL_WIDTH + EDGE_WIDTH, OFFSET_TOP + POINTY_HEIGHT - EDGE_VERTICAL_EXTRA);
+    for (var i = BOARD_SIZE - 1; i >= 0; i--) {
+        ctx.lineTo(OFFSET_LEFT + (i + 1) * CELL_WIDTH, OFFSET_TOP + POINTY_HEIGHT);
+        ctx.lineTo(OFFSET_LEFT + (i + 1/2) * CELL_WIDTH, OFFSET_TOP);
+    }
+    ctx.lineTo(1 + EDGE_WIDTH, OFFSET_TOP + POINTY_HEIGHT);
+    ctx.lineTo(1, OFFSET_TOP + POINTY_HEIGHT - EDGE_VERTICAL_EXTRA);
+    ctx.fill();
+    ctx.stroke();
+    ctx.closePath();
+}
+
+function drawBottomEdge() {
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    var x = OFFSET_LEFT + (BOARD_SIZE - 1) * CELL_WIDTH / 2;
+    var y = OFFSET_TOP + BOARD_SIZE * CELL_HEIGHT + POINTY_HEIGHT;
+    ctx.lineTo(x - EDGE_WIDTH, y - EDGE_HEIGHT + EDGE_VERTICAL_EXTRA);
+    for (var i = 0; i < BOARD_SIZE; i++) {
+        ctx.lineTo(x + (i + 1/2) * CELL_WIDTH, y + EDGE_HEIGHT);
+        if (i == BOARD_SIZE - 1)
+            break;
+        ctx.lineTo(x + (i + 1) * CELL_WIDTH, y - POINTY_HEIGHT + EDGE_HEIGHT);
+    }
+    ctx.lineTo(x + BOARD_SIZE * CELL_WIDTH + EDGE_WIDTH, y - POINTY_HEIGHT + EDGE_VERTICAL_EXTRA);
+    for (var i = BOARD_SIZE - 1; i >= 0; i--) {
+        ctx.lineTo(x + (i + 1) * CELL_WIDTH, y - POINTY_HEIGHT);
+        ctx.lineTo(x + (i + 1/2) * CELL_WIDTH, y);
+    }
+    ctx.lineTo(x, y - POINTY_HEIGHT);
+    ctx.lineTo(x - EDGE_WIDTH, y - EDGE_HEIGHT + EDGE_VERTICAL_EXTRA);
+    ctx.fill();
+    ctx.stroke();
+    ctx.closePath();
+}
+
+function drawCell(i, j, background) {
+    var x = OFFSET_LEFT + CELL_WIDTH * (i/2 + j);
+    var y = OFFSET_TOP + CELL_HEIGHT * i;
+    ctx.fillStyle = background;
+    ctx.beginPath();
+    ctx.moveTo(x, y + POINTY_HEIGHT);
+    ctx.lineTo(x + CELL_WIDTH/2, y);
+    ctx.lineTo(x + CELL_WIDTH, y + POINTY_HEIGHT);
+    ctx.lineTo(x + CELL_WIDTH, y + CELL_HEIGHT);
+    ctx.lineTo(x + CELL_WIDTH/2, y + CELL_HEIGHT + POINTY_HEIGHT);
+    ctx.lineTo(x, y + CELL_HEIGHT);
+    ctx.lineTo(x, y + POINTY_HEIGHT);
+    ctx.fill();
+    ctx.stroke();
+    ctx.closePath();
+}
+
+function drawEmptyCell(i, j) {
+    drawCell(i, j, "#ffa");
+}
+
+function highlightLatest(i, j) {
+    drawCell(i, j, "#aaf");
+}
+
+function placeStone(row, column, color) {
+    board[row][column] = color;
+    var x = OFFSET_LEFT + CELL_WIDTH * (row/2 + column);
+    var y = OFFSET_TOP + CELL_HEIGHT * row;
+    ctx.fillStyle = stoneColor[color];
+    ctx.beginPath();
+    ctx.arc(
+        x + CELL_WIDTH/2, y + (CELL_HEIGHT + POINTY_HEIGHT)/2,
+        STONE_RADIUS,
+        0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.closePath();
+}
+
+function drawPlacementMarker(row, column) {
+    var x = OFFSET_LEFT + CELL_WIDTH * (row/2 + column);
+    var y = OFFSET_TOP + CELL_HEIGHT * row;
+    ctx.fillStyle = '#4f4';
+    ctx.beginPath();
+    ctx.arc(
+        x + CELL_WIDTH/2, y + (CELL_HEIGHT + POINTY_HEIGHT)/2,
+        STONE_RADIUS / 2,
+        0, Math.PI * 2);
+    ctx.fill();
+    ctx.closePath();
+}
+
+function drawConversionMarker(row, column) {
+    var x = OFFSET_LEFT + CELL_WIDTH * (row/2 + column);
+    var y = OFFSET_TOP + CELL_HEIGHT * row;
+    ctx.fillStyle = '#4af';
+    ctx.beginPath();
+    ctx.arc(
+        x + CELL_WIDTH/2, y + (CELL_HEIGHT + POINTY_HEIGHT)/2,
+        STONE_RADIUS / 2,
+        0, Math.PI);
+    ctx.fill();
+    ctx.closePath();
+}
+
+function redrawBoard() {
+    for (var i = 0; i < BOARD_SIZE; i++) {
+        for (var j = 0; j < BOARD_SIZE; j++) {
+            drawEmptyCell(i, j);
+        }
+    }
+    currentPlayer = PLAYER1;
+    swapped = false;
+    for (var i in moves) {
+        if (i >= currentMove)
+            break;
+        var move = moves[i];
+        var isLatestMove = i == currentMove - 1;
+        switch (move.type) {
+            case "placement":
+                var own = move.own,
+                    neutral = move.neutral;
+                if (isLatestMove) {
+                    highlightLatest(own[0], own[1]);
+                    highlightLatest(neutral[0], neutral[1]);
+                }
+                placeStone(own[0], own[1], colorOf(currentPlayer));
+                placeStone(neutral[0], neutral[1], STONE_NEUTRAL);
+                currentPlayer = opponent(currentPlayer);
+                break;
+
+            case "conversion":
+                var neutral1 = move.neutral1,
+                    neutral2 = move.neutral2,
+                    own = move.own;
+                if (isLatestMove) {
+                    highlightLatest(neutral1[0], neutral1[1]);
+                    highlightLatest(neutral2[0], neutral2[1]);
+                    highlightLatest(own[0], own[1]);
+                }
+                placeStone(neutral1[0], neutral1[1], colorOf(currentPlayer));
+                placeStone(neutral2[0], neutral2[1], colorOf(currentPlayer));
+                placeStone(own[0], own[1], STONE_NEUTRAL);
+                currentPlayer = opponent(currentPlayer);
+                break;
+
+            case "swap":
+                swapped = true;
+                currentPlayer = PLAYER1;
+                break;
+        }
+    }
+}
+
+function opponent(player) {
+    return player == PLAYER1 ? PLAYER2 : PLAYER1;
+}
+
+function colorOf(player) {
+    return player == PLAYER1 && !swapped
+        ? STONE_VERTICAL
+        : player == PLAYER2 && swapped
+            ? STONE_VERTICAL
+            : STONE_HORIZONTAL;
+}
+</script>
+  </body>
+</html>
