@@ -56,9 +56,25 @@ Played between jonalv (black) and masak (white) on Friday 2016-04-15.
 
 ![move #28](028.png)
 
+A game-changing move. White uses his own piece to cause real concern with
+Black's bottom-edge connection, forcing black to respond &mdash; while also
+using the neutral piece to make turn the bridge connection at the top insecure.
+
+One immediate conclusion from this is that in Nex, unlike in Hex, bridges need
+to be monitored closely. In Hex, they can still be intruded on, but in Nex, an
+intrusion can happen slowly and in several different ways. This needs more
+analysis.
+
 ![move #29](029.png)
 
+Black responds by pushing through one of the white bridges to the edge. Even
+here, White could defend immediately by converting the gray stone just placed,
+blocking the offense towards the edge.
+
 ![move #30](030.png)
+
+Instead, White makes good on the bridge intrusion. Black now has no viable
+connection to the top edge.
 
 ![move #31](031.png)
 
@@ -103,3 +119,7 @@ Played between jonalv (black) and masak (white) on Friday 2016-04-15.
 ![move #51](051.png)
 
 ![move #52](052.png)
+
+This decisively ends the game. Black could intrude with both pieces into the
+remaining bridge, but White would just convert the neutral piece and complete
+the white chain.
