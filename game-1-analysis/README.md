@@ -11,7 +11,7 @@ Played between jonalv (black) and masak (white) on Friday 2016-04-15.
 ![move #5](005.png)
 
 ![move #6](006.png)
-
+m
 ![move #7](007.png)
 
 ![move #8](008.png)
@@ -58,7 +58,7 @@ Played between jonalv (black) and masak (white) on Friday 2016-04-15.
 
 A game-changing move. White uses his own piece to cause real concern with
 Black's bottom-edge connection, forcing black to respond &mdash; while also
-using the neutral piece to make turn the bridge connection at the top insecure.
+using the neutral piece to turn the bridge connection at the top insecure.
 
 One immediate conclusion from this is that in Nex, unlike in Hex, bridges need
 to be monitored closely. In Hex, they can still be intruded on, but in Nex, an
