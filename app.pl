@@ -61,6 +61,11 @@ sub persist-move($dbh, Int $moves-played, Int $player, @pairs) {
 
 constant INIT_MARKER = 'var moves = [];  // moves injected by server';
 
+my $events = Supplier.new;
+my $event-supply = $events.Supply;
+
+sub JSON(@pairs) { to-json(%@pairs).subst(/\s+/, " ", :g) }
+
 sub app(%env) {
     given %env<REQUEST_METHOD PATH_INFO> {
         when 'GET', '/' {
@@ -93,11 +98,9 @@ sub app(%env) {
                     my $game = game-from-database($dbh);
                     $game.place(:$player, :$own, :$neutral);
 
-                    persist-move(
-                        $dbh,
-                        $game.moves-played,
-                        +%params<player>,
-                        [:type<placement>, :$own, :$neutral]);
+                    my $data = [:type<placement>, :$own, :$neutral];
+                    persist-move($dbh, $game.moves-played, +%params<player>, $data);
+                    $events.emit("data: { JSON($data) }\r\n\r\n".encode);
                 }
                 when "conversion" {
                     # XXX: input validation
@@ -110,11 +113,9 @@ sub app(%env) {
                     my $game = game-from-database($dbh);
                     $game.convert(:$player, :$neutral1, :$neutral2, :$own);
 
-                    persist-move(
-                        $dbh,
-                        $game.moves-played,
-                        +%params<player>,
-                        [:type<conversion>, :$neutral1, :$neutral2, :$own]);
+                    my $data = [:type<conversion>, :$neutral1, :$neutral2, :$own];
+                    persist-move($dbh, $game.moves-played, +%params<player>, $data);
+                    $events.emit("data: { JSON($data) }\r\n\r\n".encode);
                 }
                 when "swap" {
                     # XXX: input validation
@@ -123,7 +124,9 @@ sub app(%env) {
                     my $game = game-from-database($dbh);
                     $game.swap();
 
-                    persist-move($dbh, $game.moves-played, 2, [:type<swap>]);
+                    my $data = [:type<swap>];
+                    persist-move($dbh, $game.moves-played, 2, $data);
+                    $events.emit("data: { JSON($data) }\r\n\r\n".encode);
                 }
                 default {
                     return [
@@ -149,6 +152,15 @@ sub app(%env) {
                     ];
                 }
             }
+        }
+
+        when 'GET', '/game-events' {
+            return 200,
+                [
+                    Cache-Control => 'must-revalidate, no-cache',
+                    Content-Type => 'text/plain; charset=utf-8, text/event-stream'
+                ],
+                $event-supply;
         }
 
         when 'GET', '/favicon.ico' {
