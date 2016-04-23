@@ -23,7 +23,7 @@ sub game-from-database($dbh) {
     my $sth = $dbh.prepare(q:to '.');
         SELECT move_data
         FROM Move
-        WHERE game_id = 1
+        WHERE game_id = 2
         ORDER BY seq_no ASC
         .
     $sth.execute();
@@ -36,7 +36,7 @@ sub moves-array-from-database() {
     my $sth = $dbh.prepare(q:to '.');
         SELECT move_data
         FROM Move
-        WHERE game_id = 1
+        WHERE game_id = 2
         ORDER BY seq_no ASC
         .
     $sth.execute();
@@ -56,7 +56,7 @@ sub persist-move($dbh, Int $moves-played, Int $player, @pairs) {
         INSERT INTO Move (game_id, seq_no, player_no, move_data)
         VALUES (?, ?, ?, ?)
         .
-    $sth.execute(1, $moves-played, $player, $move-data);
+    $sth.execute(2, $moves-played, $player, $move-data);
 }
 
 constant INIT_MARKER = 'var moves = [];  // moves injected by server';
