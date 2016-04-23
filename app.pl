@@ -80,8 +80,7 @@ sub app(%env) {
         }
 
         when 'POST', '/game' {
-            my $data = %env<p6sgi.input>.decode;
-            my %params = from-json($data);
+            my %params = from-json(%env<p6sgi.input>.slurp-rest);
 
             given %params<type> {
                 when "placement" {
