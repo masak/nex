@@ -1,7 +1,7 @@
 use lib 'lib';
 use Games::Nex;
 
-use Bailador;
+use HTTP::Server::Tiny;
 use DBIish;
 
 sub connect() {
@@ -61,74 +61,112 @@ sub persist-move($dbh, Int $moves-played, Int $player, @pairs) {
 
 constant INIT_MARKER = 'var moves = [];  // moves injected by server';
 
-get '/' => sub {
-    return slurp("game.html").subst(INIT_MARKER, moves-array-from-database);
-}
-
-get '/replay' => sub {
-    return slurp("replay.html").subst(INIT_MARKER, moves-array-from-database);
-}
-
-post '/game' => sub {
-    my $data = request.env<p6sgi.input>.decode;
-    my %params = from-json($data);
-
-    given %params<type> {
-        when "placement" {
-            # XXX: input validation
-            my $player = %params<player> eq "1" ?? Player1 !! Player2;
-            my Pos $own = [+%params<own>[0], +%params<own>[1]];
-            my Pos $neutral = [+%params<neutral>[0], +%params<neutral>[1]];
-
-            my $dbh will leave { .dispose() } = connect();
-            my $game = game-from-database($dbh);
-            $game.place(:$player, :$own, :$neutral);
-
-            persist-move(
-                $dbh,
-                $game.moves-played,
-                +%params<player>,
-                [:type<placement>, :$own, :$neutral]);
+sub app(%env) {
+    given %env<REQUEST_METHOD PATH_INFO> {
+        when 'GET', '/' {
+            return [
+                200,
+                ["Content-Type" => "text/html"],
+                [slurp("game.html").subst(INIT_MARKER, moves-array-from-database)]
+            ];
         }
-        when "conversion" {
-            # XXX: input validation
-            my $player = %params<player> eq "1" ?? Player1 !! Player2;
-            my Pos $neutral1 = [+%params<neutral1>[0], +%params<neutral1>[1]];
-            my Pos $neutral2 = [+%params<neutral2>[0], +%params<neutral2>[1]];
-            my Pos $own = [+%params<own>[0], +%params<own>[1]];
 
-            my $dbh will leave { .dispose() } = connect();
-            my $game = game-from-database($dbh);
-            $game.convert(:$player, :$neutral1, :$neutral2, :$own);
-
-            persist-move(
-                $dbh,
-                $game.moves-played,
-                +%params<player>,
-                [:type<conversion>, :$neutral1, :$neutral2, :$own]);
+        when 'GET', '/replay' {
+            return [
+                200,
+                ["Content-Type" => "text/html"],
+                [slurp("replay.html").subst(INIT_MARKER, moves-array-from-database)]
+            ];
         }
-        when "swap" {
-            # XXX: input validation
 
-            my $dbh will leave { .dispose() } = connect();
-            my $game = game-from-database($dbh);
-            $game.swap();
+        when 'POST', '/game' {
+            my $data = %env<p6sgi.input>.decode;
+            my %params = from-json($data);
 
-            persist-move($dbh, $game.moves-played, 2, [:type<swap>]);
+            given %params<type> {
+                when "placement" {
+                    # XXX: input validation
+                    my $player = %params<player> eq "1" ?? Player1 !! Player2;
+                    my Pos $own = [+%params<own>[0], +%params<own>[1]];
+                    my Pos $neutral = [+%params<neutral>[0], +%params<neutral>[1]];
+
+                    my $dbh will leave { .dispose() } = connect();
+                    my $game = game-from-database($dbh);
+                    $game.place(:$player, :$own, :$neutral);
+
+                    persist-move(
+                        $dbh,
+                        $game.moves-played,
+                        +%params<player>,
+                        [:type<placement>, :$own, :$neutral]);
+                }
+                when "conversion" {
+                    # XXX: input validation
+                    my $player = %params<player> eq "1" ?? Player1 !! Player2;
+                    my Pos $neutral1 = [+%params<neutral1>[0], +%params<neutral1>[1]];
+                    my Pos $neutral2 = [+%params<neutral2>[0], +%params<neutral2>[1]];
+                    my Pos $own = [+%params<own>[0], +%params<own>[1]];
+
+                    my $dbh will leave { .dispose() } = connect();
+                    my $game = game-from-database($dbh);
+                    $game.convert(:$player, :$neutral1, :$neutral2, :$own);
+
+                    persist-move(
+                        $dbh,
+                        $game.moves-played,
+                        +%params<player>,
+                        [:type<conversion>, :$neutral1, :$neutral2, :$own]);
+                }
+                when "swap" {
+                    # XXX: input validation
+
+                    my $dbh will leave { .dispose() } = connect();
+                    my $game = game-from-database($dbh);
+                    $game.swap();
+
+                    persist-move($dbh, $game.moves-played, 2, [:type<swap>]);
+                }
+                default {
+                    return [
+                        400,
+                        ["Content-Type" => "text/html"],
+                        ["Unknown move type '%params<type>'"]
+                    ];
+                }
+            }
+
+            return [
+                200,
+                ["Content-Type" => "text/html"],
+                ["ACK"]
+            ];
+
+            CATCH {
+                default {
+                    return [
+                        400,
+                        ["Content-Type" => "text/html"],
+                        [~$_]
+                    ];
+                }
+            }
         }
+
+        when 'GET', '/favicon.ico' {
+            return [
+                404,
+                ["Content-Type" => "text/html"],
+                []
+            ];
+        }
+
         default {
-            die "Unknown move type '%params<type>'";
+            die .perl;
         }
     }
-
-    return "ACK";
-
-    CATCH {
-        default {
-            status(400);
-            return ~$_;
-        }
-    }
 }
 
-baile( Int(%*ENV<PORT> || 5000) );
+HTTP::Server::Tiny.new(
+    port => %*ENV<PORT> || 5000,
+    max-keepalive-reqs => 10
+).run(&app);
