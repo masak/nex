@@ -167,6 +167,7 @@ sub app(%env) {
 }
 
 HTTP::Server::Tiny.new(
+    host => '0.0.0.0',
     port => %*ENV<PORT> || 5000,
     max-keepalive-reqs => 10
 ).run(&app);
