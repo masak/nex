@@ -64,7 +64,10 @@ constant INIT_MARKER = 'var moves = [];  // moves injected by server';
 my $events = Supplier.new;
 my $event-supply = $events.Supply;
 
-sub JSON(@pairs) { to-json(%@pairs).subst(/\s+/, " ", :g) }
+sub JSON($player, @pairs) {
+    my %data = :$player, |@pairs;
+    return to-json(%data).subst(/\s+/, " ", :g);
+}
 
 sub app(%env) {
     given %env<REQUEST_METHOD PATH_INFO> {
@@ -99,8 +102,9 @@ sub app(%env) {
                     $game.place(:$player, :$own, :$neutral);
 
                     my $data = [:type<placement>, :$own, :$neutral];
-                    persist-move($dbh, $game.moves-played, +%params<player>, $data);
-                    $events.emit("data: { JSON($data) }\r\n\r\n".encode);
+                    my $p = +%params<player>;
+                    persist-move($dbh, $game.moves-played, $p, $data);
+                    $events.emit("data: { JSON($p, $data) }\r\n\r\n".encode);
                 }
                 when "conversion" {
                     # XXX: input validation
@@ -114,8 +118,9 @@ sub app(%env) {
                     $game.convert(:$player, :$neutral1, :$neutral2, :$own);
 
                     my $data = [:type<conversion>, :$neutral1, :$neutral2, :$own];
-                    persist-move($dbh, $game.moves-played, +%params<player>, $data);
-                    $events.emit("data: { JSON($data) }\r\n\r\n".encode);
+                    my $p = +%params<player>;
+                    persist-move($dbh, $game.moves-played, $p, $data);
+                    $events.emit("data: { JSON($p, $data) }\r\n\r\n".encode);
                 }
                 when "swap" {
                     # XXX: input validation
@@ -125,8 +130,9 @@ sub app(%env) {
                     $game.swap();
 
                     my $data = [:type<swap>];
-                    persist-move($dbh, $game.moves-played, 2, $data);
-                    $events.emit("data: { JSON($data) }\r\n\r\n".encode);
+                    my $p = 2;
+                    persist-move($dbh, $game.moves-played, $p, $data);
+                    $events.emit("data: { JSON($p, $data) }\r\n\r\n".encode);
                 }
                 default {
                     return [
