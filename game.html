@@ -84,6 +84,8 @@ for (var i = 0; i < BOARD_SIZE; i++) {
     board[i] = {};
 }
 
+var alreadyGotMove = false;
+
 ctx.clearRect(0, 0, canvas.width, canvas.height);
 drawLeftEdge();
 drawRightEdge();
@@ -188,8 +190,14 @@ State.PLACEMENT_READY_COMMIT.prototype.commit = function commit() {
 
     $.post("/game", JSON.stringify(moveData))
         .done(function (data) {
+            if (alreadyGotMove) {
+                alreadyGotMove = false;
+                return;
+            }
+
             moves.push(moveData);
             redrawBoard();
+            alreadyGotMove = true;
         })
         .fail(function (err) {
             redrawBoard();
@@ -266,8 +274,14 @@ State.CONVERSION_READY_COMMIT.prototype.commit = function commit() {
 
     $.post("/game", JSON.stringify(moveData))
         .done(function (data) {
+            if (alreadyGotMove) {
+                alreadyGotMove = false;
+                return;
+            }
+
             moves.push(moveData);
             redrawBoard();
+            alreadyGotMove = true;
         })
         .fail(function (err) {
             redrawBoard();
@@ -293,8 +307,14 @@ State.SWAP_READY_COMMIT.prototype.commit = function commit() {
 
     $.post("/game", JSON.stringify(moveData))
         .done(function (data) {
+            if (alreadyGotMove) {
+                alreadyGotMove = false;
+                return;
+            }
+
             moves.push(moveData);
             redrawBoard();
+            alreadyGotMove = true;
         })
         .fail(function (err) {
             redrawBoard();
@@ -349,6 +369,20 @@ $("#btn-commit-move").on("click", function onClickCommit(event) {
         return;
     currentState.commit();
 });
+
+var eventSource = new EventSource("/game-events");
+
+eventSource.onmessage = function(e) {
+    if (alreadyGotMove) {
+        alreadyGotMove = false;
+        return;
+    }
+
+    var moveData = JSON.parse(e.data);
+    moves.push(moveData);
+    redrawBoard();
+    alreadyGotMove = true;
+};
 
 // init code ends. only functions below this point.
 
