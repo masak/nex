@@ -9,6 +9,8 @@ introduces a mechanism by which stones turn from neutral to your own color, and
 vice versa. If you're usually playing Hex with black and white stones, it makes
 sense to think of the neutral stones as gray.
 
+![move #28](game-1-analysis/028.png)
+
 In Nex there are two types of move:
 
 1. **Placement**: Put one stone of your own color, and one neutral stone on the
