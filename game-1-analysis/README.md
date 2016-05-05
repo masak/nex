@@ -11,7 +11,7 @@ Played between jonalv (black) and masak (white) on Friday 2016-04-15.
 ![move #5](005.png)
 
 ![move #6](006.png)
-m
+
 ![move #7](007.png)
 
 ![move #8](008.png)
