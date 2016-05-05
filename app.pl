@@ -69,20 +69,47 @@ sub JSON($player, @pairs) {
     return to-json(%data).subst(/\s+/, " ", :g);
 }
 
-sub route-show-game() {
+sub send-OK-response(Str $content) {
     return [
         200,
         ["Content-Type" => "text/html"],
-        [slurp("game.html").subst(INIT_MARKER, moves-array-from-database)]
+        [$content]
     ];
 }
 
-sub route-replay-game() {
+sub send-bad-request-response(Str $content) {
+    return [
+        400,
+        ["Content-Type" => "text/html"],
+        [$content]
+    ];
+}
+
+sub send-SSE-response(Supply $supply) {
     return [
         200,
-        ["Content-Type" => "text/html"],
-        [slurp("replay.html").subst(INIT_MARKER, moves-array-from-database)]
+        [
+            Cache-Control => 'must-revalidate, no-cache',
+            Content-Type => 'text/plain; charset=utf-8, text/event-stream'
+        ],
+        $supply
     ];
+}
+
+sub send-not-found-response() {
+    return [
+        404,
+        ["Content-Type" => "text/html"],
+        []
+    ];
+}
+
+sub route-show-game() {
+    send-OK-response(slurp("game.html").subst(INIT_MARKER, moves-array-from-database));
+}
+
+sub route-replay-game() {
+    send-OK-response(slurp("replay.html").subst(INIT_MARKER, moves-array-from-database));
 }
 
 sub route-submit-move($data) {
@@ -133,48 +160,25 @@ sub route-submit-move($data) {
             $events.emit("data: { JSON($p, $data) }\r\n\r\n".encode);
         }
         default {
-            return [
-                400,
-                ["Content-Type" => "text/html"],
-                ["Unknown move type '%params<type>'"]
-            ];
+            return send-bad-request-response("Unknown move type '%params<type>'");
         }
     }
 
-    return [
-        200,
-        ["Content-Type" => "text/html"],
-        ["ACK"]
-    ];
+    return send-OK-response("ACK");
 
     CATCH {
         default {
-            return [
-                400,
-                ["Content-Type" => "text/html"],
-                [~$_]
-            ];
+            return send-bad-request-response(~$_);
         }
     }
 }
 
 sub route-subscribe-game-events() {
-    return [
-        200,
-        [
-            Cache-Control => 'must-revalidate, no-cache',
-            Content-Type => 'text/plain; charset=utf-8, text/event-stream'
-        ],
-        $event-supply
-    ];
+    return send-SSE-response($event-supply);
 }
 
 sub route-favicon() {
-    return [
-        404,
-        ["Content-Type" => "text/html"],
-        []
-    ];
+    return send-not-found-response();
 }
 
 sub app(%env) {
