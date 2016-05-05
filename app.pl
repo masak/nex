@@ -69,117 +69,126 @@ sub JSON($player, @pairs) {
     return to-json(%data).subst(/\s+/, " ", :g);
 }
 
-sub app(%env) {
-    given %env<REQUEST_METHOD PATH_INFO> {
-        when 'GET', '/' {
-            return [
-                200,
-                ["Content-Type" => "text/html"],
-                [slurp("game.html").subst(INIT_MARKER, moves-array-from-database)]
-            ];
+sub route-show-game() {
+    return [
+        200,
+        ["Content-Type" => "text/html"],
+        [slurp("game.html").subst(INIT_MARKER, moves-array-from-database)]
+    ];
+}
+
+sub route-replay-game() {
+    return [
+        200,
+        ["Content-Type" => "text/html"],
+        [slurp("replay.html").subst(INIT_MARKER, moves-array-from-database)]
+    ];
+}
+
+sub route-submit-move($data) {
+    my %params = from-json($data);
+
+    given %params<type> {
+        when "placement" {
+            # XXX: input validation
+            my $player = %params<player> eq "1" ?? Player1 !! Player2;
+            my Pos $own = [+%params<own>[0], +%params<own>[1]];
+            my Pos $neutral = [+%params<neutral>[0], +%params<neutral>[1]];
+
+            my $dbh will leave { .dispose() } = connect();
+            my $game = game-from-database($dbh);
+            $game.place(:$player, :$own, :$neutral);
+
+            my $data = [:type<placement>, :$own, :$neutral];
+            my $p = +%params<player>;
+            persist-move($dbh, $game.moves-played, $p, $data);
+            $events.emit("data: { JSON($p, $data) }\r\n\r\n".encode);
         }
+        when "conversion" {
+            # XXX: input validation
+            my $player = %params<player> eq "1" ?? Player1 !! Player2;
+            my Pos $neutral1 = [+%params<neutral1>[0], +%params<neutral1>[1]];
+            my Pos $neutral2 = [+%params<neutral2>[0], +%params<neutral2>[1]];
+            my Pos $own = [+%params<own>[0], +%params<own>[1]];
 
-        when 'GET', '/replay' {
-            return [
-                200,
-                ["Content-Type" => "text/html"],
-                [slurp("replay.html").subst(INIT_MARKER, moves-array-from-database)]
-            ];
+            my $dbh will leave { .dispose() } = connect();
+            my $game = game-from-database($dbh);
+            $game.convert(:$player, :$neutral1, :$neutral2, :$own);
+
+            my $data = [:type<conversion>, :$neutral1, :$neutral2, :$own];
+            my $p = +%params<player>;
+            persist-move($dbh, $game.moves-played, $p, $data);
+            $events.emit("data: { JSON($p, $data) }\r\n\r\n".encode);
         }
+        when "swap" {
+            # XXX: input validation
 
-        when 'POST', '/game' {
-            my %params = from-json(%env<p6sgi.input>.slurp-rest);
+            my $dbh will leave { .dispose() } = connect();
+            my $game = game-from-database($dbh);
+            $game.swap();
 
-            given %params<type> {
-                when "placement" {
-                    # XXX: input validation
-                    my $player = %params<player> eq "1" ?? Player1 !! Player2;
-                    my Pos $own = [+%params<own>[0], +%params<own>[1]];
-                    my Pos $neutral = [+%params<neutral>[0], +%params<neutral>[1]];
-
-                    my $dbh will leave { .dispose() } = connect();
-                    my $game = game-from-database($dbh);
-                    $game.place(:$player, :$own, :$neutral);
-
-                    my $data = [:type<placement>, :$own, :$neutral];
-                    my $p = +%params<player>;
-                    persist-move($dbh, $game.moves-played, $p, $data);
-                    $events.emit("data: { JSON($p, $data) }\r\n\r\n".encode);
-                }
-                when "conversion" {
-                    # XXX: input validation
-                    my $player = %params<player> eq "1" ?? Player1 !! Player2;
-                    my Pos $neutral1 = [+%params<neutral1>[0], +%params<neutral1>[1]];
-                    my Pos $neutral2 = [+%params<neutral2>[0], +%params<neutral2>[1]];
-                    my Pos $own = [+%params<own>[0], +%params<own>[1]];
-
-                    my $dbh will leave { .dispose() } = connect();
-                    my $game = game-from-database($dbh);
-                    $game.convert(:$player, :$neutral1, :$neutral2, :$own);
-
-                    my $data = [:type<conversion>, :$neutral1, :$neutral2, :$own];
-                    my $p = +%params<player>;
-                    persist-move($dbh, $game.moves-played, $p, $data);
-                    $events.emit("data: { JSON($p, $data) }\r\n\r\n".encode);
-                }
-                when "swap" {
-                    # XXX: input validation
-
-                    my $dbh will leave { .dispose() } = connect();
-                    my $game = game-from-database($dbh);
-                    $game.swap();
-
-                    my $data = [:type<swap>];
-                    my $p = 2;
-                    persist-move($dbh, $game.moves-played, $p, $data);
-                    $events.emit("data: { JSON($p, $data) }\r\n\r\n".encode);
-                }
-                default {
-                    return [
-                        400,
-                        ["Content-Type" => "text/html"],
-                        ["Unknown move type '%params<type>'"]
-                    ];
-                }
-            }
-
-            return [
-                200,
-                ["Content-Type" => "text/html"],
-                ["ACK"]
-            ];
-
-            CATCH {
-                default {
-                    return [
-                        400,
-                        ["Content-Type" => "text/html"],
-                        [~$_]
-                    ];
-                }
-            }
+            my $data = [:type<swap>];
+            my $p = 2;
+            persist-move($dbh, $game.moves-played, $p, $data);
+            $events.emit("data: { JSON($p, $data) }\r\n\r\n".encode);
         }
-
-        when 'GET', '/game-events' {
-            return 200,
-                [
-                    Cache-Control => 'must-revalidate, no-cache',
-                    Content-Type => 'text/plain; charset=utf-8, text/event-stream'
-                ],
-                $event-supply;
-        }
-
-        when 'GET', '/favicon.ico' {
-            return [
-                404,
-                ["Content-Type" => "text/html"],
-                []
-            ];
-        }
-
         default {
-            die .perl;
+            return [
+                400,
+                ["Content-Type" => "text/html"],
+                ["Unknown move type '%params<type>'"]
+            ];
         }
+    }
+
+    return [
+        200,
+        ["Content-Type" => "text/html"],
+        ["ACK"]
+    ];
+
+    CATCH {
+        default {
+            return [
+                400,
+                ["Content-Type" => "text/html"],
+                [~$_]
+            ];
+        }
+    }
+}
+
+sub route-subscribe-game-events() {
+    return [
+        200,
+        [
+            Cache-Control => 'must-revalidate, no-cache',
+            Content-Type => 'text/plain; charset=utf-8, text/event-stream'
+        ],
+        $event-supply
+    ];
+}
+
+sub route-favicon() {
+    return [
+        404,
+        ["Content-Type" => "text/html"],
+        []
+    ];
+}
+
+sub app(%env) {
+    return do given %env<REQUEST_METHOD PATH_INFO> {
+        when 'GET', '/'
+            { route-show-game() }
+        when 'GET', '/replay'
+            { route-replay-game() }
+        when 'POST', '/game'
+            { route-submit-move(%env<p6sgi.input>.slurp-rest) }
+        when 'GET', '/game-events'
+            { route-subscribe-game-events() }
+        when 'GET', '/favicon.ico'
+            { route-favicon() }
     }
 }
 
